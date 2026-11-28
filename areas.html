@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<script src="/_app/gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Area Reports · Magnolia Admin</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/shell.css">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="/js/topbar.js" defer></script>
+<style>
+:root {
+  color-scheme: light;
+  --mist: #f3f4f7; --paper: #fff; --line: #e1e4ea; --line2: #eceef2;
+  --ink: #2b2326; --body: #4a4347; --slate: #6b6f78;
+  --mag: #73213b; --mag-deep: #5a1a2f; --mag-soft: #f6eef1; --leaf: #006b46; --leaf-soft: #e8f3ee;
+  --amber: #8a5a00; --amber-soft: #fbf3e2; --red: #b3261e; --red-soft: #fbeceb; --blue: #2f5d9b; --blue-soft: #eaf0f8;
+  --serif: 'MG PT Serif', 'PT Serif', Georgia, serif;
+  --sans: 'MG Manrope', Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+body { background: var(--mist); color: var(--body); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+.wrap { padding: clamp(16px, 3.5vw, 40px); padding-bottom: 64px; display: grid; gap: 20px; max-width: 1400px; margin: 0 auto; }
+h1, h2, h3 { color: var(--ink); margin: 0; text-wrap: balance; }
+h1 { font-family: var(--serif); font-size: clamp(24px, 3vw, 32px); line-height: 1.2; }
+h2 { font-family: var(--serif); font-size: 21px; }
+h3 { font-size: 16px; }
+p { margin: 0; }
+a { color: var(--mag); }
+.lede { max-width: 860px; display: grid; gap: 6px; }
+.muted { color: var(--slate); }
+.small { font-size: 13px; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(43,35,38,.06), 0 4px 14px rgba(43,35,38,.06); min-width: 0; }
+.btn { font: 700 14px var(--sans); border: 0; background: var(--mag); color: #fff; height: 38px; padding: 0 16px; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { background: var(--mag-deep); }
+.btn.ghost { background: var(--paper); color: var(--mag); border: 1px solid var(--line); }
+.btn.ghost:hover { border-color: var(--mag); }
+.btn:disabled { opacity: .55; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.row .push { margin-left: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--paper); }
+.seg button { border: 0; height: 36px; padding: 0 14px; cursor: pointer; background: none; font: 600 14px var(--sans); color: var(--body); }
+.seg button[aria-pressed="true"] { background: var(--mag); color: #fff; }
+label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 700; color: var(--ink); }
+input[type=text], input[type=number], input[type=search], select { font: 500 14px var(--sans); height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; background: var(--paper); color: var(--ink); min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 4px 10px; font: 600 13px var(--sans); cursor: pointer; color: var(--body); display: inline-flex; gap: 6px; align-items: center; }
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.area-card { display: grid; gap: 8px; align-content: start; }
+.area-card h3 a { color: var(--ink); text-decoration: none; }
+.area-card h3 a:hover { color: var(--mag); }
+.state { font-size: 13px; font-weight: 700; }
+.state.running { color: var(--amber); }
+.state.failed { color: var(--red); }
+.newgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 18px; }
+@media (max-width: 900px) { .newgrid { grid-template-columns: 1fr; } }
+.howpick { display: grid; gap: 10px; }
+.howpick fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+.howpick legend { font-weight: 700; color: var(--ink); font-size: 14px; padding: 0 4px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+#draw-map { height: 360px; border-radius: 10px; border: 1px solid var(--line); }
+#map { height: 520px; border-radius: 10px; border: 1px solid var(--line); }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.stat { background: var(--mist); border-radius: 10px; padding: 10px 12px; }
+.stat b { display: block; font-size: 22px; color: var(--ink); font-family: var(--serif); line-height: 1.2; }
+.stat span { font-size: 13px; color: var(--slate); }
+.board-list { display: grid; gap: 8px; }
+.bi { display: grid; gap: 2px; padding: 8px 10px; border-left: 3px solid var(--line); background: var(--mist); border-radius: 0 8px 8px 0; }
+.bi.open { border-color: var(--leaf); background: var(--leaf-soft); }
+.bi.signals { border-color: var(--amber); background: var(--amber-soft); }
+.bi.targets { border-color: var(--blue); background: var(--blue-soft); }
+.bi b { color: var(--ink); }
+.day { display: grid; gap: 12px; }
+.day > h3 { font-family: var(--serif); font-size: 19px; border-bottom: 2px solid var(--mag); padding-bottom: 4px; }
+.pcard { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); break-inside: avoid; }
+@media (max-width: 640px) { .pcard { grid-template-columns: 1fr; } }
+.pcard img { width: 200px; height: 140px; object-fit: cover; border-radius: 6px; background: var(--line2); display: block; }
+@media (max-width: 640px) { .pcard img { width: 100%; height: 180px; } }
+.pcard .t { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pcard .t b { color: var(--ink); font-size: 16px; }
+.num { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 50%; background: var(--mag); color: #fff; font-weight: 800; font-size: 13px; flex: none; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--mist); color: var(--slate); }
+.tag.pub { background: var(--blue-soft); color: var(--blue); }
+.tag.hot { background: var(--leaf-soft); color: var(--leaf); }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; }
+.facts span b { color: var(--ink); }
+.why { font-size: 13.5px; color: var(--leaf); font-weight: 600; }
+.how { font-size: 13px; color: var(--slate); }
+.links { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
+table.list { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.list th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--slate); border-bottom: 1px solid var(--line); padding: 6px 8px; position: sticky; top: 52px; background: var(--paper); }
+table.list td { border-bottom: 1px solid var(--line2); padding: 7px 8px; vertical-align: top; }
+table.list td.r, table.list th.r { text-align: right; white-space: nowrap; }
+table.list tr { break-inside: avoid; }
+.catsec { display: grid; gap: 10px; }
+.catsec > .row h2 { font-size: 19px; }
+.hidden { display: none !important; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; }
+.legend span { display: inline-flex; gap: 5px; align-items: center; }
+.err { color: var(--red); font-weight: 600; }
+.pin-num { background: var(--mag); color: #fff; border: 2px solid #fff; border-radius: 50%; font: 800 11px var(--sans); display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.print-only { display: none; }
+.pcard { position: relative; }
+.pcard .rm { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); color: var(--slate); font: 700 18px/1 var(--sans); cursor: pointer; display: grid; place-items: center; }
+.pcard .rm:hover, .pcard .rm:focus-visible { background: var(--red); border-color: var(--red); color: #fff; }
+.pcard.has-rm .t { padding-right: 34px; }
+.edited { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 6px; padding: 6px 10px; background: var(--amber-soft); border-radius: 8px; font-size: 13px; }
+.edited button { border: 0; background: none; color: var(--mag); font-weight: 700; cursor: pointer; padding: 0; font-size: 13px; }
+details.dirs { margin: 0 0 0 36px; font-size: 13px; color: var(--body); }
+details.dirs summary { cursor: pointer; color: var(--slate); font-weight: 700; font-size: 12.5px; }
+ol.turns { margin: 4px 0 2px; padding-left: 20px; display: grid; gap: 1px; }
+ol.turns li::marker { color: var(--slate); font-size: 11px; }
+@media print { details.dirs { font-size: 10px; margin-left: 24px; } ol.turns { gap: 0; } }
+/* ---- print / PDF ---- */
+@page { size: letter; margin: 0.45in 0.45in 0.55in; }
+@media print {
+  body { background: #fff; font-size: 11.5px; }
+  .topbar, .no-print, #list-view, #new-card { display: none !important; }
+  .print-only { display: block; }
+  .wrap { padding: 0; gap: 14px; max-width: none; }
+  .card { box-shadow: none; border: 0; padding: 0; }
+  #map { height: 560px; border: 1px solid #ccc; }
+  .pcard { grid-template-columns: 150px minmax(0, 1fr); padding: 8px; gap: 10px; }
+  .pcard img { width: 150px; height: 105px; }
+  .pcard .t b { font-size: 13.5px; }
+  .facts, .why, .links { font-size: 11px; }
+  .how { font-size: 10.5px; }
+  table.list { font-size: 10.5px; }
+  table.list th { position: static; font-size: 9.5px; }
+  table.list td { padding: 4px 5px; }
+  .pagebreak { break-before: page; }
+  a { color: var(--mag); text-decoration: none; }
+  h2 { font-size: 17px; }
+  .day > h3 { font-size: 15px; }
+  .stat b { font-size: 17px; }
+}
+body.printing .topbar, body.printing .no-print, body.printing #list-view, body.printing #new-card { display: none !important; }
+body.printing .print-only { display: block; }
+.leaflet-div-icon.star-pin, .star-pin { background: transparent; border: 0; }
+/* lay the page out at the letter page's printable width (8.5in - 2 x 0.45in) so the map is framed the same on screen and on paper */
+body.printing .wrap { width: 7.6in; max-width: 7.6in; padding: 0; margin: 0 auto; }
+body.printing #map { height: 560px; }
+@media print {
+  #map, #map2-wrap, .legend { break-inside: avoid; page-break-inside: avoid; }
+  #map2-wrap { break-before: page; page-break-before: always; }
+}
+body.printing #map2 { height: 640px !important; }
+/* Chrome prints a shadow on a rounded pin as a gray square, so pins and flags print flat */
+body.printing .leaflet-marker-icon, body.printing .leaflet-marker-icon * { box-shadow: none !important; }
+@media print { .leaflet-marker-icon, .leaflet-marker-icon * { box-shadow: none !important; } }
+</style>
+</head>
+<body>
+<header class="topbar" data-page="areas"></header>
+<div class="wrap">
+
+  <!-- ===== list of areas + new area ===== -->
+  <section id="list-view" class="hidden" style="display:grid;gap:20px">
+    <div class="lede">
+      <h1>Area reports</h1>
+      <p>Every big roof in an area you pick: schools, churches, strip malls, veterans posts and lodges, meeting halls, public housing, hotels, plus everything already on the board there. Run <b>Best opportunities</b> when you'll only be in town a day or two (a short list in driving order), or <b>Deep dive</b> for the whole picture. Each report downloads as a PDF.</p>
+    </div>
+    <div class="areas" id="areas"></div>
+    <section class="card" id="new-card" aria-labelledby="new-h">
+      <div class="row"><h2 id="new-h">New area</h2></div>
+      <form id="new-form" class="newgrid" autocomplete="off">
+        <div class="howpick">
+          <label class="f">Name<input type="text" id="n-name" required placeholder="e.g. Florence & I-95 (mile 150–170)"></label>
+          <fieldset>
+            <legend>How to pick the area</legend>
+            <div class="seg" role="group" aria-label="How to pick the area">
+              <button type="button" data-how="draw" aria-pressed="true">Draw on map</button>
+              <button type="button" data-how="corridor" aria-pressed="false">Interstate</button>
+              <button type="button" data-how="place" aria-pressed="false">Around a town</button>
+            </div>
+            <div data-for="draw" class="small muted">Click the map to outline the area (at least 3 points). <button type="button" class="btn ghost" id="undo" style="height:28px;padding:0 10px">Undo point</button> <button type="button" class="btn ghost" id="clear" style="height:28px;padding:0 10px">Clear</button></div>
+            <div data-for="corridor" class="fields hidden">
+              <label class="f">Interstate<select id="n-route"><option>I 26</option><option>I 95</option><option>I 20</option><option>I 77</option><option>I 85</option><option>I 385</option><option>I 526</option><option>I 73</option></select></label>
+              <label class="f">From mile<input type="number" id="n-from" min="0" max="250" placeholder="139"></label>
+              <label class="f">To mile<input type="number" id="n-to" min="0" max="250" placeholder="159"></label>
+              <label class="f">Miles each side<input type="number" id="n-miles" min="1" max="25" value="4"></label>
+            </div>
+            <div data-for="place" class="fields hidden">
+              <label class="f" style="grid-column:span 2">Town<input type="text" id="n-place" placeholder="Santee, SC"></label>
+              <label class="f">Miles around<input type="number" id="n-radius" min="1" max="40" value="8"></label>
+            </div>
+          </fieldset>
+          <label class="f">Also follow an interstate (optional: ranks places near its exits higher and orders the drive)
+            <span class="row"><select id="n-froute"><option value="">None</option><option>I 26</option><option>I 95</option><option>I 20</option><option>I 77</option><option>I 85</option><option>I 385</option></select>
+            <input type="number" id="n-ffrom" placeholder="from mile" style="width:110px"><input type="number" id="n-fto" placeholder="to mile" style="width:110px"></span></label>
+          <label class="f">Smallest building to include (sq ft)<input type="number" id="n-min" value="3000" min="1000" step="500"></label>
+          <div class="row"><span class="small muted" id="new-msg" role="status"></span><button class="btn push" type="submit">Save and build</button></div>
+        </div>
+        <div><div id="draw-map" aria-label="Map: click to outline the area"></div></div>
+      </form>
+    </section>
+  </section>
+
+  <!-- ===== one report ===== -->
+  <section id="report-view" class="hidden" style="display:grid;gap:20px">
+    <div class="row no-print"><a href="/areas" class="small">← All areas</a></div>
+    <div class="print-only"><img src="/img/logo.webp" alt="Magnolia Roofing" style="height:34px"></div>
+    <div class="lede">
+      <h1 id="r-title">Area report</h1>
+      <p id="r-sub" class="muted"></p>
+    </div>
+    <div class="card no-print">
+      <div class="row">
+        <div class="seg" role="group" aria-label="Report type">
+          <button type="button" data-mode="quick" aria-pressed="false">Best opportunities</button>
+          <button type="button" data-mode="deep" aria-pressed="false">Deep dive</button>
+          <button type="button" data-mode="route" aria-pressed="false">Scouting route</button>
+          <button type="button" data-mode="meet" aria-pressed="false">Meeting + nearby</button>
+        </div>
+        <label class="row small" id="days-wrap">Days in the area <select id="days"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+        <input type="search" id="q" placeholder="Search names, streets, towns" aria-label="Search places" style="width:220px">
+        <label class="row small">Roof at least <select id="minsq"><option value="0">any size</option><option value="5000">5,000 sq ft</option><option value="10000">10,000</option><option value="20000">20,000</option><option value="50000">50,000</option></select></label>
+        <span class="push"></span>
+        <button class="btn ghost" type="button" id="rebuild">Refresh data</button>
+        <a class="btn" id="pdf" href="#" download>Download PDF</a>
+      </div>
+      <div class="row hidden" id="plan-route" style="margin-top:10px">
+        <label class="row small">Start <select id="p-start"></select></label>
+        <label class="row small">End <select id="p-end"></select></label>
+        <label class="row small">Hours <select id="p-hours"><option>2</option><option>3</option><option selected>4</option><option>6</option><option>8</option></select></label>
+        <button type="button" class="btn ghost" id="p-pick-start" style="height:32px">Set start on map</button>
+      </div>
+      <div class="row hidden" id="plan-meet" style="margin-top:10px">
+        <label class="row small">Meeting at <select id="p-pin" style="max-width:320px"></select></label>
+        <input type="text" id="p-addr" placeholder="or type an address" style="width:220px" aria-label="Meeting address">
+        <button type="button" class="btn ghost" id="p-find" style="height:32px">Find</button>
+        <button type="button" class="btn ghost" id="p-pick-pin" style="height:32px">Pick on map</button>
+        <label class="row small">Time after the meeting <select id="p-mins"><option value="60">1 hour</option><option value="90" selected>1½ hours</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></label>
+      </div>
+      <div class="row hidden" id="plan-common" style="margin-top:10px">
+        <label class="row small">At each stop <select id="p-dwell"><option value="2">Drive by and look (2 min)</option><option value="mix" selected>Drive by public places, stop in at businesses (10 min)</option><option value="10">Stop in everywhere (10 min)</option></select></label>
+        <label class="row small">Leave at <input type="time" id="p-time" value="09:00"></label>
+        <label class="row small"><input type="checkbox" id="p-dirs" checked> Turn-by-turn directions (on screen and in the PDF)</label>
+        <span class="small muted" id="p-msg" role="status"></span>
+      </div>
+      <div class="chips" id="cats" style="margin-top:10px" aria-label="Show categories"></div>
+      <p class="small muted" id="r-state" role="status" style="margin-top:6px"></p>
+    </div>
+    <div class="card" style="display:grid;gap:12px">
+      <div class="stats" id="stats"></div>
+      <div id="map" aria-label="Map of the area and the places in this report"></div>
+      <div id="map2-wrap" class="hidden"><h3 style="margin:4px 0 6px">Close-up of the busiest stretch</h3><div id="map2" style="height:520px;border-radius:10px;border:1px solid var(--line)" aria-label="Close-up map of the route"></div></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card" id="board-card" style="display:grid;gap:12px"></div>
+    <div id="body" style="display:grid;gap:20px"></div>
+    <div class="card small muted" id="sources"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const qs = new URLSearchParams(location.search);
+  const PRINT = qs.get('print') === '1';
+  if (PRINT) document.body.classList.add('printing');
+  const E = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const fmtN = (n) => Number(n || 0).toLocaleString('en-US');
+  const fmtDate = (d) => { if (!d) return ''; const x = new Date(d.length > 10 ? d : d + 'T12:00:00'); return x.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+  const COLORS = { school: '#2f5d9b', college: '#1d3f73', housing: '#7b3fa0', government: '#4a5868', church: '#73213b', veterans: '#b3261e', venue: '#c2185b', retail: '#006b46',
+    hotel: '#00838f', medical: '#d84315', apartments: '#8e6bbf', office: '#6d7a86', industrial: '#8a5a00', commercial: '#9e9e9e', agriculture: '#a1887f', other: '#b0b4bb' };
+  const j = (u, o) => fetch(u, o).then(async (r) => { const b = await r.json().catch(() => ({})); if (!r.ok) throw new Error(b.error || r.statusText); return b; });
+  const areaId = (location.pathname.match(/^\/areas\/([A-Za-z0-9_-]+)/) || [])[1];
+
+  /* ================= list view ================= */
+  async function listView() {
+    $('list-view').classList.remove('hidden');
+    const box = $('areas'); box.textContent = '';
+    let docs = [];
+    try { docs = (await j('/api/col/areas')).docs; } catch (e) { box.append(el('p', 'err', 'Couldn’t load areas: ' + e.message)); }
+    if (!docs.length) box.append(el('p', 'muted', 'No areas yet. Make one below.'));
+    for (const d of docs.sort((a, b) => (b.data.created || '').localeCompare(a.data.created || ''))) {
+      const c = el('article', 'card area-card');
+      const h = el('h3'); const a = el('a', null, d.data.name || d.id); a.href = '/areas/' + d.id; h.append(a); c.append(h);
+      const shapes = (d.data.shapes || []).map((s) => s.type === 'corridor' ? `${s.route} mile ${s.from}–${s.to} (±${s.miles} mi)` : s.type === 'place' ? `${s.miles} mi around ${s.q}` : s.type === 'circle' ? `${s.miles} mi circle` : (s.label || 'drawn outline')).join(' + ');
+      c.append(el('p', 'small muted', shapes));
+      const st = el('p', 'state small'); c.append(st);
+      const row = el('div', 'row');
+      const b = el('button', 'btn ghost', 'Refresh data'); b.type = 'button';
+      const open = el('a', 'btn push', 'Open report'); open.href = '/areas/' + d.id;
+      row.append(b, open); c.append(row);
+      box.append(c);
+      const show = async () => {
+        const [s, r] = await Promise.all([j(`/api/area/${d.id}/status`).catch(() => ({})), j(`/api/area/${d.id}`).catch(() => null)]);
+        if (s.state === 'running') { st.className = 'state small running'; st.textContent = 'Building: ' + (s.msg || '…'); setTimeout(show, 4000); }
+        else if (s.state === 'failed') { st.className = 'state small failed'; st.textContent = 'Last build failed: ' + (s.msg || ''); }
+        else if (r) { st.className = 'state small'; st.textContent = `${fmtN(r.sites.length)} places · ${fmtN(Object.values(r.board).reduce((n, v) => n + v.length, 0))} board items · built ${fmtDate(r.built)}`; }
+        else { st.className = 'state small muted'; st.textContent = 'Not built yet'; }
+        open.hidden = !r;
+      };
+      b.addEventListener('click', async () => { b.disabled = true; try { await j(`/api/area/${d.id}/build`, { method: 'POST' }); } catch (e) { st.textContent = e.message; } b.disabled = false; show(); });
+      show();
+    }
+    newArea();
+  }
+
+  function newArea() {
+    const map = L.map('draw-map', { scrollWheelZoom: false }).setView([33.75, -80.9], 7);
+    L.tileLayer(E + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors' }).addTo(map);
+    let pts = [], shape = null, how = 'draw';
+    const redraw = () => { if (shape) shape.remove(); shape = pts.length > 2 ? L.polygon(pts, { color: '#73213b' }).addTo(map) : L.polyline(pts, { color: '#73213b' }).addTo(map); };
+    map.on('click', (e) => { if (how !== 'draw') return; pts.push([+e.latlng.lat.toFixed(4), +e.latlng.lng.toFixed(4)]); redraw(); });
+    $('undo').onclick = () => { pts.pop(); redraw(); };
+    $('clear').onclick = () => { pts = []; redraw(); };
+    document.querySelectorAll('[data-how]').forEach((b) => b.addEventListener('click', () => {
+      how = b.dataset.how;
+      document.querySelectorAll('[data-how]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      document.querySelectorAll('[data-for]').forEach((x) => x.classList.toggle('hidden', x.dataset.for !== how));
+    }));
+    $('new-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('new-msg'); msg.className = 'small muted'; msg.textContent = '';
+      const name = $('n-name').value.trim();
+      let shapes;
+      if (how === 'draw') { if (pts.length < 3) { msg.className = 'err small'; msg.textContent = 'Click at least 3 points on the map.'; return; } shapes = [{ type: 'polygon', label: 'Drawn outline', points: pts }]; }
+      else if (how === 'corridor') { const f = +$('n-from').value, t = +$('n-to').value; if (!f && f !== 0 || !t) { msg.className = 'err small'; msg.textContent = 'Enter both mile markers.'; return; } shapes = [{ type: 'corridor', route: $('n-route').value, from: f, to: t, miles: +$('n-miles').value || 4 }]; }
+      else { const q = $('n-place').value.trim(); if (!q) { msg.className = 'err small'; msg.textContent = 'Enter a town.'; return; } shapes = [{ type: 'place', q: /,/.test(q) ? q : q + ', SC', miles: +$('n-radius').value || 8 }]; }
+      const data = { name, shapes, mode: 'quick', min_sqft: +$('n-min').value || 3000, extras: [] };
+      if ($('n-froute').value && $('n-ffrom').value && $('n-fto').value) data.focus = { route: $('n-froute').value, from: +$('n-ffrom').value, to: +$('n-fto').value };
+      else if (how === 'corridor') data.focus = { route: shapes[0].route, from: shapes[0].from, to: shapes[0].to };
+      const id = (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'area') + '-' + Math.random().toString(16).slice(2, 6);
+      try {
+        await j('/api/col/areas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, data }) });
+        await j(`/api/area/${id}/build`, { method: 'POST' });
+        location.href = '/areas/' + id;
+      } catch (err) { msg.className = 'err small'; msg.textContent = 'Couldn’t save: ' + err.message; }
+    });
+  }
+
+  /* ================= report view ================= */
+  let R = null, mode = qs.get('mode') || null, map = null, layer = null;
+  const cats = new Set();
+  async function reportView() {
+    $('report-view').classList.remove('hidden');
+    let area = null;
+    try { area = (await j('/api/col/areas')).docs.find((d) => d.id === areaId); } catch (e) {}
+    try { R = await j('/api/area/' + areaId); } catch (e) { R = null; }
+    if (!R) {
+      $('r-title').textContent = area ? area.data.name : 'Area report';
+      const s = await j(`/api/area/${areaId}/status`).catch(() => ({}));
+      $('r-state').textContent = s.state === 'running' ? 'Building the report: ' + (s.msg || '…') + ' (the first build of an area takes 5–30 minutes; this page updates itself).' : s.state === 'failed' ? 'The build failed: ' + s.msg : 'Not built yet.';
+      if (s.state === 'running') setTimeout(reportView, 5000);
+      return;
+    }
+    mode = mode || R.mode || 'deep';
+    document.title = R.name + ' · Area report';
+    $('r-title').textContent = R.name;
+    if (qs.get('days')) $('days').value = qs.get('days');
+    if (qs.get('cats')) qs.get('cats').split(',').forEach((k) => R.cats[k] && cats.add(k));
+    else Object.keys(R.cats).filter((k) => k !== 'agriculture').forEach((k) => cats.add(k));
+    if (qs.get('minsq')) $('minsq').value = qs.get('minsq');
+    if (qs.get('q')) $('q').value = qs.get('q');
+    drawChips();
+    document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; draw(); }));
+    ['days', 'minsq'].forEach((id) => $(id).addEventListener('change', draw));
+    $('q').addEventListener('input', () => { clearTimeout($('q')._t); $('q')._t = setTimeout(draw, 200); });
+    $('rebuild').addEventListener('click', rebuild);
+    initPlan();
+    pollState();
+    draw();
+  }
+
+  async function pollState() {
+    const s = await j(`/api/area/${areaId}/status`).catch(() => ({}));
+    const box = $('r-state');
+    if (s.state === 'running') { box.textContent = 'Refreshing: ' + (s.msg || '…'); $('rebuild').disabled = true; setTimeout(pollState, 4000); }
+    else { $('rebuild').disabled = false; box.textContent = s.state === 'failed' ? 'Last refresh failed: ' + s.msg : ''; if (s.state === 'done' && R && s.at > R.built) location.reload(); }
+  }
+  async function rebuild() { try { await j(`/api/area/${areaId}/build`, { method: 'POST' }); } catch (e) { $('r-state').textContent = e.message; } pollState(); }
+
+  function drawChips() {
+    const box = $('cats'); box.textContent = '';
+    const n = {}; R.sites.forEach((s) => { n[s.cat] = (n[s.cat] || 0) + 1; });
+    Object.entries(R.cats).forEach(([k, c]) => {
+      if (!n[k]) return;
+      const b = el('button', 'chip'); b.type = 'button'; b.setAttribute('aria-pressed', String(cats.has(k)));
+      const dot = el('span', 'dot'); dot.style.background = COLORS[k]; b.append(dot, document.createTextNode(`${c.label} ${fmtN(n[k])}`));
+      b.addEventListener('click', () => { cats.has(k) ? cats.delete(k) : cats.add(k); b.setAttribute('aria-pressed', String(cats.has(k))); draw(); });
+      box.append(b);
+    });
+  }
+
+  function filtered() {
+    const q = $('q').value.trim().toLowerCase(), min = +$('minsq').value;
+    return R.sites.filter((s) => cats.has(s.cat) && (!min || s.sqft >= min) && (!q || [s.name, s.address, s.town, s.also.join(' '), s.occ].join(' ').toLowerCase().includes(q)));
+  }
+
+  // Best opportunities: a short list (named places and big roofs first, no more than 7 of a kind), split into days along the drive.
+  function quickPick(list) {
+    const per = {}, out = [];
+    const ok = (s) => s.board.some((b) => b.kind === 'open') || ((s.named || s.sqft >= 20000) && s.cat !== 'agriculture' && !(s.cat === 'other' && s.sqft < 40000));
+    for (const s of list) {
+      if (!ok(s)) continue;
+      const cap = s.board.some((b) => b.kind === 'open') ? 99 : 7;
+      if ((per[s.cat] || 0) >= cap) continue;
+      per[s.cat] = (per[s.cat] || 0) + 1; out.push(s);
+      if (out.length >= 12 * (+$('days').value || 2)) break;
+    }
+    return out;
+  }
+  function dayPlan(list) {
+    const days = +$('days').value || 2;
+    const pos = (s) => s.route ? s.route.mm : s.lon * 50;
+    const sorted = list.slice().sort((a, b) => pos(a) - pos(b));
+    const per = Math.ceil(sorted.length / days), out = [];
+    for (let i = 0; i < days; i++) { const chunk = sorted.slice(i * per, (i + 1) * per); if (chunk.length) out.push(chunk); }
+    return out;
+  }
+
+  function draw() {
+    document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    $('days-wrap').classList.toggle('hidden', mode !== 'quick');
+    $('plan-route').classList.toggle('hidden', mode !== 'route');
+    $('plan-meet').classList.toggle('hidden', mode !== 'meet');
+    $('plan-common').classList.toggle('hidden', mode !== 'route' && mode !== 'meet');
+    if (mode === 'route' || mode === 'meet') return drawPlan();
+    $('body').before($('board-card'));
+    $('map2-wrap').classList.add('hidden');
+    const pq = new URLSearchParams({ mode, days: $('days').value, cats: [...cats].join(','), minsq: $('minsq').value, q: $('q').value.trim() });
+    const pdf = $('pdf'); pdf.href = `/api/area/${areaId}/pdf?${pq}`;
+    pdf.textContent = 'Download PDF';
+    const list = filtered();
+    const sub = [mode === 'quick' ? 'Best opportunities' : 'Deep dive', 'built ' + fmtDate(R.built), (R.counties || []).map((c) => c + ' County').join(', ')].filter(Boolean).join(' · ');
+    $('r-sub').textContent = sub;
+    const shown = mode === 'quick' ? quickPick(list) : list;
+    drawStats(list, shown);
+    drawMap(shown);
+    drawBoard();
+    $('body').textContent = '';
+    if (mode === 'quick') drawQuick(shown); else drawDeep(shown);
+    drawSources();
+  }
+
+  /* ================= trip planning: scouting route + meeting & nearby ================= */
+  const PL = { custom: {}, pick: null, osrm: {} };
+  const ll = (v) => { const m = String(v || '').split(','); return m.length >= 2 ? { lat: +m[0], lon: +m[1] } : null; };
+  const fmtLL = (p) => p.lat.toFixed(5) + ',' + p.lon.toFixed(5);
+  function initPlan() {
+    const c = { lat: (R.bbox[0] + R.bbox[2]) / 2, lon: (R.bbox[1] + R.bbox[3]) / 2 };
+    // the area's busiest spot (most leads within 2 miles) is a better "center" than the middle of the box
+    let best = c, bn = -1;
+    R.sites.slice(0, 400).forEach((s) => { const n = R.sites.reduce((k, o) => k + (miDist(s, o) < 2 ? 1 : 0), 0); if (n > bn) { bn = n; best = { lat: s.lat, lon: s.lon }; } });
+    PL.places = [...(R.exits || []).map((e) => ({ v: fmtLL(e), t: `Exit ${e.mm}${R.focus ? ' (' + R.focus.route.replace(' ', '-') + ')' : ''}` })),
+      { v: fmtLL(best), t: 'Downtown / busiest part of the area' }];
+    const fill = (sel, extra) => { sel.textContent = ''; extra.concat(PL.places).forEach((o) => { const op = el('option', null, o.t); op.value = o.v; sel.append(op); }); };
+    fill($('p-start'), []); fill($('p-end'), [{ v: 'same', t: 'Back to the start' }]);
+    // meeting spots: open bids, then the strongest leads
+    const pin = $('p-pin'); pin.textContent = '';
+    const og = (label, rows) => { const g = el('optgroup'); g.label = label; rows.forEach(([v, t]) => { const o = el('option', null, t); o.value = v; g.append(o); }); pin.append(g); };
+    og('Open bids', R.board.open.filter((o) => o.lat != null).map((o) => [fmtLL(o) + '|' + o.title, o.title]));
+    og('Top leads', R.sites.slice(0, 60).map((s) => [fmtLL(s) + '|' + s.name, `${s.name} (${s.town || ''})`]));
+    const sel = (id, v) => { if (v == null) return; const e = $(id); if (![...e.options].some((o) => o.value === v)) { const o = el('option', null, 'Point on map'); o.value = v; e.append(o); } e.value = v; };
+    sel('p-start', qs.get('start')); sel('p-end', qs.get('end')); sel('p-pin', qs.get('pin'));
+    ['hours', 'mins', 'dwell', 'time'].forEach((k) => { if (qs.get(k)) $('p-' + k).value = qs.get(k); });
+    if (qs.get('dirs') === '0') $('p-dirs').checked = false;
+    if (qs.get('stops')) { PL.keep = qs.get('stops').split(',').filter(Boolean); PL.keepSig = null; PL.keepFromUrl = true; }
+    ['p-start', 'p-end', 'p-hours', 'p-pin', 'p-mins', 'p-dwell', 'p-time', 'p-dirs'].forEach((id) => $(id).addEventListener('change', draw));
+    const pick = (target) => { PL.pick = target; $('p-msg').textContent = 'Click the map to set it.'; $('map').scrollIntoView({ block: 'center' }); };
+    $('p-pick-start').onclick = () => pick('p-start');
+    $('p-pick-pin').onclick = () => pick('p-pin');
+    $('p-find').onclick = async () => {
+      const q = $('p-addr').value.trim(); if (!q) return;
+      $('p-msg').textContent = 'Looking up the address…';
+      try {
+        const r = await fetch('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q: /SC|South Carolina/i.test(q) ? q : q + ', SC', format: 'json', limit: 1, countrycodes: 'us' })).then((x) => x.json());
+        if (!r.length) { $('p-msg').textContent = 'Couldn’t find that address.'; return; }
+        sel('p-pin', `${(+r[0].lat).toFixed(5)},${(+r[0].lon).toFixed(5)}|${q}`); $('p-pin').selectedOptions[0].textContent = q; $('p-msg').textContent = ''; draw();
+      } catch (e) { $('p-msg').textContent = 'Address lookup failed.'; }
+    };
+  }
+  function miDist(a, b) { const r = Math.PI / 180, x = (b.lon - a.lon) * r * Math.cos((a.lat + b.lat) / 2 * r), y = (b.lat - a.lat) * r; return Math.sqrt(x * x + y * y) * 3958.8; }
+
+  // Drive times between every pair of points (OSRM, the OpenStreetMap router); straight-line estimate if it can't be reached.
+  async function matrix(pts) {
+    const key = pts.map(fmtLL).join(';');
+    if (PL.osrm[key]) return PL.osrm[key];
+    try {
+      const r = await fetch(`/api/route?kind=table&pts=${pts.map((p) => p.lon.toFixed(5) + ',' + p.lat.toFixed(5)).join(';')}`).then((x) => x.json());
+      if (r.code !== 'Ok') throw new Error(r.code);
+      return (PL.osrm[key] = { min: r.durations.map((row) => row.map((v) => (v == null ? 999 : v / 60))), mi: r.distances.map((row) => row.map((v) => (v == null ? 999 : v / 1609.34))), real: true });
+    } catch (e) {
+      const mi = pts.map((a) => pts.map((b) => miDist(a, b) * 1.3));
+      return (PL.osrm[key] = { mi, min: mi.map((row) => row.map((d) => d / 35 * 60 + (d ? 1 : 0))), real: false });
+    }
+  }
+  async function roadLine(pts) {
+    try {
+      const r = await fetch(`/api/route?kind=route&pts=${pts.map((p) => p.lon.toFixed(5) + ',' + p.lat.toFixed(5)).join(';')}`).then((x) => x.json());
+      if (r.code === 'Ok') return { line: r.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]), legs: r.routes[0].legs.map((l) => ({ min: l.duration / 60, mi: l.distance / 1609.34, steps: l.steps || [] })) };
+    } catch (e) {}
+    return null;
+  }
+
+  // Turn-by-turn text for one OSRM step ("Turn right onto Chestnut St")
+  const COMPASS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+  function stepText(st) {
+    const m = st.maneuver || {}, t = m.type, mod = m.modifier || '';
+    if (mod === 'uturn') return 'Make a U-turn' + (st.name ? ' on ' + st.name : '');
+    const road = [st.name, st.ref ? `(${st.ref.replace(/;/g, ' / ')})` : ''].filter(Boolean).join(' ').trim() || st.ref || '';
+    const onto = road ? ' onto ' + road : '';
+    switch (t) {
+      case 'depart': return `Head ${COMPASS[Math.round((m.bearing_after || 0) / 45) % 8]}${road ? ' on ' + road : ''}`;
+      case 'arrive': return `Arrive at the stop${mod && mod !== 'straight' ? ', on the ' + mod : ''}`;
+      case 'turn': case 'end of road': return `Turn ${mod}${onto || ' into the property / lot'}`;
+      case 'continue': case 'new name': return mod && !/straight/.test(mod) ? `Bear ${mod.replace('slight ', '')}${onto}` : `Continue${onto}`;
+      case 'merge': return `Merge${mod && !/straight/.test(mod) ? ' ' + mod : ''}${onto}`;
+      case 'on ramp': return `Take the ramp${onto || (st.destinations ? ' toward ' + st.destinations : '')}`;
+      case 'off ramp': return `Take exit${st.exits ? ' ' + st.exits : ''}${st.destinations ? ' toward ' + st.destinations : onto}`;
+      case 'fork': return `Keep ${mod.replace('slight ', '')}${onto || (st.destinations ? ' toward ' + st.destinations : '')}`;
+      case 'roundabout': case 'rotary': case 'roundabout turn': return `At the roundabout, take exit ${m.exit || 1}${onto}`;
+      default: return `${(t || 'Go').replace(/^./, (c) => c.toUpperCase())}${mod ? ' ' + mod : ''}${onto}`;
+    }
+  }
+  const dist = (m) => m < 160 ? Math.round(m * 3.281 / 10) * 10 + ' ft' : (m / 1609.34).toFixed(m < 16093 ? 1 : 0) + ' mi';
+  function directions(leg) {
+    const ol = el('ol', 'turns');
+    (leg.steps || []).forEach((st) => {
+      if (st.maneuver && st.maneuver.type === 'arrive') return;
+      if ((st.maneuver.type === 'new name' || st.maneuver.type === 'continue') && st.distance < 40) return;
+      const li = el('li'); li.append(document.createTextNode(stepText(st)));
+      if (st.distance >= 15) li.append(el('span', 'muted', ' · ' + dist(st.distance)));
+      ol.append(li);
+    });
+    return ol;
+  }
+
+  // Pick the stops worth the most per added minute, inside the time budget (an "orienteering" route):
+  // keep inserting the stop with the best value / extra-minutes ratio wherever it costs least, then untangle the order (2-opt).
+  function orienteer(M, n, budget, dwell, value) {
+    let route = [0, 1], used = new Set(), cost = M.min[0][1];
+    const legs = (r) => r.slice(0, -1).reduce((t, a, i) => t + M.min[a][r[i + 1]], 0) + r.slice(1, -1).reduce((t, k) => t + dwell(k), 0);
+    for (let round = 0; round < 2; round++) {
+      for (;;) {
+        let best = null;
+        for (let k = 2; k < n; k++) {
+          if (used.has(k)) continue;
+          for (let i = 0; i < route.length - 1; i++) {
+            const a = route[i], b = route[i + 1], add = M.min[a][k] + M.min[k][b] - M.min[a][b] + dwell(k);
+            if (cost + add > budget) continue;
+            const ratio = value(k) / (add + 0.5);
+            if (!best || ratio > best.ratio) best = { k, i, add, ratio };
+          }
+        }
+        if (!best) break;
+        route.splice(best.i + 1, 0, best.k); used.add(best.k); cost += best.add;
+      }
+      // 2-opt: reverse any stretch of the route that makes it shorter
+      let better = true;
+      while (better) {
+        better = false;
+        for (let i = 1; i < route.length - 2; i++) for (let j = i + 1; j < route.length - 1; j++) {
+          const r2 = route.slice(0, i).concat(route.slice(i, j + 1).reverse(), route.slice(j + 1));
+          if (legs(r2) < legs(route) - 0.01) { route = r2; better = true; }
+        }
+      }
+      cost = legs(route);
+    }
+    return { route, cost };
+  }
+
+  async function drawPlan() {
+    const msg = $('p-msg'); msg.textContent = 'Planning…';
+    const meet = mode === 'meet';
+    let start, end, label, budget;
+    if (meet) {
+      const [pt, lab] = String($('p-pin').value || '').split('|');
+      start = end = ll(pt); label = lab || 'Meeting'; budget = +$('p-mins').value;
+    } else {
+      start = ll($('p-start').value); end = $('p-end').value === 'same' ? start : ll($('p-end').value); budget = +$('p-hours').value * 60;
+    }
+    if (!start) { msg.textContent = 'Pick a starting point.'; return; }
+    const dw = $('p-dwell').value;
+    const dwellOf = (s) => dw === 'mix' ? (s.group === 'private' && s.name_kind !== 'owner' ? 10 : 2) : +dw;
+    // candidates: the strongest leads (by the filters above); for a meeting, only within reach of the pin
+    const reach = meet ? Math.min(15, budget / 60 * 9) : 99;
+    let cand = filtered().filter((s) => s.cat !== 'agriculture' && miDist(start, s) <= reach);
+    const open = cand.filter((s) => s.board.some((b) => b.kind === 'open'));
+    cand = [...new Set(open.concat(cand.slice(0, 85)))].slice(0, 90);
+    // the plan's settings; removing stops (the X on each card) only sticks while these stay the same
+    const sig = [mode, meet ? $('p-pin').value + '|' + $('p-mins').value : $('p-start').value + '|' + $('p-end').value + '|' + $('p-hours').value, dw, [...cats].join(','), $('minsq').value, $('q').value.trim()].join('#');
+    if (PL.keep && PL.keepFromUrl) { PL.keepSig = sig; PL.keepFromUrl = false; }
+    if (PL.keep && PL.keepSig !== sig) { PL.keep = null; PL.hist = []; }
+    let route, cost, stops, M;
+    if (PL.keep) {
+      const byId = new Map(R.sites.map((s) => [s.id, s]));
+      stops = PL.keep.map((id) => byId.get(id)).filter(Boolean);
+      M = await matrix([start, end].concat(stops));
+      route = [0].concat(stops.map((_, i) => i + 2), [1]);
+      cost = route.slice(0, -1).reduce((t, a, i) => t + M.min[a][route[i + 1]], 0) + stops.reduce((t, s) => t + dwellOf(s), 0);
+    } else {
+      const pts = [start, end].concat(cand);
+      M = await matrix(pts);
+      const value = (k) => Math.pow(Math.max(cand[k - 2].score, 1), 1.6);
+      ({ route, cost } = orienteer(M, pts.length, budget, (k) => dwellOf(cand[k - 2]), value));
+      stops = route.slice(1, -1).map((k) => cand[k - 2]);
+    }
+    PL.stops = stops; PL.sig = sig;
+    const showDirs = $('p-dirs').checked;
+    const seq = [start].concat(stops, [end]);
+    const road = await roadLine(seq);
+    const legs = road ? road.legs : route.slice(0, -1).map((a, i) => ({ min: M.min[a][route[i + 1]], mi: M.mi[a][route[i + 1]] }));
+    const miles = legs.reduce((t, l) => t + l.mi, 0), driveMin = legs.reduce((t, l) => t + l.min, 0);
+    msg.textContent = !road ? 'Couldn’t get road directions right now (the free router may be busy). Showing straight lines; try again in a minute.' : (M.real ? '' : 'Road times unavailable; using straight-line estimates.');
+
+    // keep the URL (and the PDF button) in sync with this plan
+    const pq = new URLSearchParams({ mode, cats: [...cats].join(','), minsq: $('minsq').value, q: $('q').value.trim(), dwell: dw, time: $('p-time').value });
+    if (!showDirs) pq.set('dirs', '0');
+    if (meet) { pq.set('pin', $('p-pin').value); pq.set('mins', $('p-mins').value); } else { pq.set('start', $('p-start').value); pq.set('end', $('p-end').value); pq.set('hours', $('p-hours').value); }
+    if (PL.keep) pq.set('stops', PL.keep.join(','));
+    $('pdf').href = `/api/area/${areaId}/pdf?${pq}`;
+    if (!PRINT) history.replaceState(null, '', location.pathname + '?' + pq);
+    $('r-sub').textContent = [meet ? 'Meeting + nearby: ' + label : 'Scouting route', 'built ' + fmtDate(R.built), (R.counties || []).map((c) => c + ' County').join(', ')].filter(Boolean).join(' · ');
+
+    // stats
+    const box = $('stats'); box.textContent = '';
+    const stat = (b, t) => { const d = el('div', 'stat'); d.append(el('b', null, b), el('span', null, t)); box.append(d); };
+    const roof = stops.reduce((n, s) => n + (s.sqft || 0), 0);
+    const t0 = $('p-time').value.split(':').map(Number), clock = (m) => { const t = t0[0] * 60 + t0[1] + m, h = Math.floor(t / 60) % 24, mm = Math.round(t % 60); return `${((h + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
+    stat(fmtN(stops.length), 'stops');
+    stat(miles.toFixed(0) + ' mi', 'of driving (' + (driveMin / 60).toFixed(1) + ' h)');
+    stat((cost / 60).toFixed(1) + ' h', 'with stops (of ' + (budget / 60).toFixed(1) + ' h)');
+    stat(fmtN(Math.round(roof / 1000)) + 'k', 'sq ft of roof seen');
+    stat(miles ? fmtN(Math.round(roof / miles / 100) / 10) + 'k' : '—', 'sq ft of roof per mile');
+    stat(clock(cost), 'back ' + (meet ? 'at the meeting spot' : 'at the end point'));
+
+    // map
+    drawMap([]);
+    const g = L.featureGroup().addTo(layer);
+    if (road) L.polyline(road.line, { color: '#1e5aa8', weight: 4, opacity: 0.8 }).addTo(g);
+    else L.polyline(seq.map((p) => [p.lat, p.lon]), { color: '#1e5aa8', weight: 3, opacity: 0.7, dashArray: '6 6' }).addTo(g);
+    const flag = (p, t, c) => L.marker([p.lat, p.lon], { icon: L.divIcon({ className: '', html: `<div style="background:${c};color:#fff;font:800 11px var(--sans);padding:2px 6px;border-radius:4px;border:2px solid #fff;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">${esc(t)}</div>`, iconSize: [70, 20], iconAnchor: [35, 10] }) }).addTo(g);
+    if (meet) {
+      L.circle([start.lat, start.lon], { radius: 1609.34, color: '#73213b', weight: 1, dashArray: '4 4', fillOpacity: 0.03 }).addTo(g);
+      flag(start, 'Meeting', '#73213b');
+    } else { flag(start, 'Start', '#006b46'); if (fmtLL(end) !== fmtLL(start)) flag(end, 'End', '#b3261e'); }
+    stops.forEach((s, i) => L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: `<div class="pin-num" style="width:22px;height:22px;background:${COLORS[s.cat]}">${i + 1}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).bindPopup(popup(s)).addTo(g));
+    map.fitBounds(g.getBounds(), { padding: [44, 44], animate: false });
+    // close-up: the stops within 2.5 miles of the route's middle, when the route also runs far beyond them
+    const mid = stops.slice().sort((a, b) => a.lat - b.lat)[Math.floor(stops.length / 2)];
+    const core = mid ? stops.filter((x) => miDist(x, mid) <= 2.5) : [];
+    const wrap = $('map2-wrap');
+    const span = (ps) => { if (!ps.length) return 0; const la = ps.map((p) => p.lat), lo = ps.map((p) => p.lon); return miDist({ lat: Math.min(...la), lon: Math.min(...lo) }, { lat: Math.max(...la), lon: Math.max(...lo) }); };
+    // only worth a second map when the whole drive is much bigger than its busy stretch (otherwise it repeats the first map)
+    if (core.length >= 6 && span(seq) > 1.8 * span(core)) {
+      wrap.classList.remove('hidden');
+      if (!PL.map2) { PL.map2 = L.map('map2', { scrollWheelZoom: false, zoomControl: !PRINT, preferCanvas: true }); L.tileLayer(E + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors' }).addTo(PL.map2); }
+      if (PL.l2) PL.l2.remove();
+      PL.l2 = L.layerGroup().addTo(PL.map2);
+      if (road) L.polyline(road.line, { color: '#1e5aa8', weight: 4, opacity: 0.8 }).addTo(PL.l2);
+      stops.forEach((x, i) => L.marker([x.lat, x.lon], { icon: L.divIcon({ className: '', html: `<div class="pin-num" style="width:22px;height:22px;background:${COLORS[x.cat]}">${i + 1}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).bindPopup(popup(x)).addTo(PL.l2));
+      PL.map2.invalidateSize(false);
+      PL.map2.fitBounds(L.latLngBounds(core.map((x) => [x.lat, x.lon])), { padding: [36, 36], animate: false });
+    } else wrap.classList.add('hidden');
+    const refit = () => { map.invalidateSize(false); map.fitBounds(g.getBounds(), { padding: [44, 44], animate: false }); };
+    if (!PRINT) { try { window.matchMedia('print').addEventListener('change', refit); } catch (e) {} window.addEventListener('beforeprint', refit); }
+    map.off('click'); map.on('click', (e) => {
+      if (!PL.pick) return;
+      const v = `${e.latlng.lat.toFixed(5)},${e.latlng.lng.toFixed(5)}` + (PL.pick === 'p-pin' ? '|Point on map' : '');
+      const sel = $(PL.pick); let o = [...sel.options].find((x) => x.value === v); if (!o) { o = el('option', null, 'Point on map'); o.value = v; sel.append(o); }
+      sel.value = v; PL.pick = null; draw();
+    });
+
+    // itinerary
+    $('body').textContent = '';
+    const head = el('div', 'card');
+    head.append(el('h2', null, meet ? `After the meeting: ${stops.length} stops within ${(budget / 60).toFixed(1)} hours` : `Scouting route: ${stops.length} stops in ${(budget / 60).toFixed(0)} hours`));
+    head.append(el('p', 'small muted', meet
+      ? 'The best roofs you can see and get back from in the time you have, starting and ending at the meeting. Everything within a mile of the meeting is listed underneath, whether it made the loop or not.'
+      : 'Chosen for the most opportunity per mile: big roofs, open bids, storm hits and places we already know, put in the order that wastes the least driving. Drive-bys take about 2 minutes; stopping in to drop a card about 10.'));
+    // Google Maps links, 8 stops per link (Google's limit on waypoints)
+    const links = el('div', 'links no-print'); links.style.marginTop = '6px';
+    for (let i = 0; i < seq.length - 1; i += 9) {
+      const part = seq.slice(i, Math.min(seq.length, i + 10));
+      if (part.length < 2) break;
+      const u = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + fmtLL(part[0]) + '&destination=' + fmtLL(part[part.length - 1]) + (part.length > 2 ? '&waypoints=' + part.slice(1, -1).map(fmtLL).join('%7C') : '');
+      const a = el('a', null, `Navigate stops ${i + 1}–${Math.min(stops.length, i + 9)} in Google Maps`); a.href = u; a.target = '_blank'; a.rel = 'noopener'; links.append(a);
+    }
+    head.append(links);
+    if (PL.keep && !PRINT) {
+      const bar = el('div', 'edited no-print');
+      const n = (PL.hist || []).length;
+      bar.append(el('span', null, n ? `You removed ${n} stop${n === 1 ? '' : 's'}. The rest keep their order.` : 'This route has been edited. The rest keep their order.'));
+      if (n) { const u = el('button', null, 'Undo'); u.type = 'button'; u.onclick = () => { PL.keep = PL.hist.pop(); draw(); }; bar.append(u); }
+      const r = el('button', null, 'Back to the suggested route'); r.type = 'button'; r.onclick = () => { PL.keep = null; PL.hist = []; draw(); }; bar.append(r);
+      head.append(bar);
+    } else if (!PRINT && stops.length) head.append(el('p', 'small muted no-print', 'Not going to need a stop? Click the × on its card to take it off the route and out of the PDF.'));
+    $('body').append(head);
+    const sec = el('section', 'card day');
+    let tmin = 0;
+    sec.append(el('h3', null, `Leave ${meet ? 'the meeting' : (($('p-start').selectedOptions[0] || {}).textContent || 'the start')} at ${clock(0)}`));
+    stops.forEach((s, i) => {
+      tmin += legs[i] ? legs[i].min : 0;
+      const when = el('p', 'small muted', `${clock(tmin)} · ${legs[i] ? Math.max(1, Math.round(legs[i].min)) + ' min, ' + legs[i].mi.toFixed(1) + ' mi' : ''} from the ${i ? 'last stop' : (meet ? 'meeting' : 'start')} · ${dwellOf(s) > 2 ? 'stop in (~10 min)' : 'drive by (~2 min)'}`);
+      when.style.margin = i ? '4px 0 -6px' : '0 0 -6px';
+      sec.append(when);
+      if (showDirs && legs[i] && legs[i].steps && legs[i].steps.length) {
+        const d = el('details', 'dirs'); d.open = true;
+        d.append(el('summary', null, `Directions to stop ${i + 1}`), directions(legs[i]));
+        sec.append(d);
+      }
+      const card = placeCard(s, i + 1);
+      if (!PRINT) {
+        const x = el('button', 'rm no-print', '×'); x.type = 'button'; x.title = 'Remove from the route'; x.setAttribute('aria-label', 'Remove ' + s.name + ' from the route');
+        x.onclick = () => { const cur = PL.stops.map((t) => t.id); PL.hist = (PL.keep ? PL.hist || [] : []).concat([cur]); PL.keep = cur.filter((id) => id !== s.id); PL.keepSig = PL.sig; draw(); };
+        card.classList.add('has-rm'); card.append(x);
+      }
+      sec.append(card);
+      tmin += dwellOf(s);
+    });
+    if (legs[stops.length]) {
+      tmin += legs[stops.length].min;
+      const last = legs[stops.length];
+      if (showDirs && last.steps && last.steps.length) { const d = el('details', 'dirs'); d.open = true; d.append(el('summary', null, meet ? 'Directions back to the meeting spot' : 'Directions to the end'), directions(last)); sec.append(d); }
+      sec.append(el('p', 'small muted', `${clock(tmin)} · ${meet ? 'back at the meeting spot' : 'at the end'} (${Math.round(last.min)} min, ${last.mi.toFixed(1)} mi)`));
+    }
+    if (!stops.length) sec.append(el('p', 'muted', 'No leads fit in that time from here. Try more time or another starting point.'));
+    $('body').append(sec);
+    if (meet) {
+      const near = R.sites.filter((s) => miDist(start, s) <= 1).sort((a, b) => b.score - a.score).slice(0, 30);
+      const nb = el('section', 'card catsec');
+      nb.append(el('h2', null, `Within a mile of the meeting (${near.length})`));
+      if (!near.length) nb.append(el('p', 'muted', 'Nothing on the lead list within a mile.'));
+      else {
+        const tb = el('table', 'list'); tb.innerHTML = '<thead><tr><th>#</th><th>Place</th><th>Address</th><th class="r">Roof sq ft</th><th class="r">Away</th></tr></thead>';
+        const body = el('tbody');
+        near.forEach((s, i) => {
+          const tr = el('tr'); tr.append(el('td', 'muted', String(i + 1)));
+          const nm = el('td'); const b = el('a', null, s.name); b.href = gsat(s); b.target = '_blank'; b.rel = 'noopener'; b.style.fontWeight = '700'; nm.append(b);
+          const i_ = s.info || {}; const c = [i_.owner && i_.owner !== s.name ? 'Owner: ' + i_.owner : '', i_.phone].filter(Boolean).join(' · '); if (c) nm.append(el('div', 'small muted', c));
+          tr.append(nm, addrCell(s), el('td', 'r', s.sqft ? fmtN(s.sqft) : '—'), el('td', 'r', miDist(start, s).toFixed(1) + ' mi'));
+          body.append(tr);
+        });
+        tb.append(body); nb.append(tb);
+      }
+      $('body').append(nb);
+    }
+    drawBoard();
+    $('sources').before($('board-card'));
+    drawSources();
+    document.body.dataset.ready = '1';
+  }
+
+  function drawStats(list, shown) {
+    const box = $('stats'); box.textContent = '';
+    const stat = (b, s) => { const d = el('div', 'stat'); d.append(el('b', null, b), el('span', null, s)); box.append(d); };
+    const roof = shown.reduce((n, s) => n + (s.sqft || 0), 0);
+    stat(fmtN(shown.length), mode === 'quick' ? 'places to visit' : 'places in this report');
+    stat(fmtN(Math.round(roof / 1000)) + 'k', 'sq ft of roof');
+    stat(fmtN(shown.filter((s) => s.group === 'public').length), 'public (bid / vendor list)');
+    stat(fmtN(shown.filter((s) => s.group === 'private').length), 'private (sell direct)');
+    const bd = R.board; stat(fmtN(bd.open.length + bd.signals.length + bd.targets.length + bd.past.length), 'already on the board here');
+    const hail = shown.filter((s) => s.storms && s.storms.hail).length, wind = shown.filter((s) => s.storms && s.storms.wind).length;
+    stat(fmtN(hail) + ' / ' + fmtN(wind), 'near hail / wind reports since ' + R.storm_window.slice(0, 4));
+  }
+
+  function satUrl(s, w = 400, h = 280) {
+    const half = Math.max(70, Math.sqrt((s.biggest || s.sqft || 4000) * 0.0929) * 0.9 + 40);   // meters
+    const dLat = half / 111320, dLon = half / (111320 * Math.cos(s.lat * Math.PI / 180)) * (w / h);
+    return `${E}World_Imagery/MapServer/export?bbox=${(s.lon - dLon).toFixed(6)},${(s.lat - dLat).toFixed(6)},${(s.lon + dLon).toFixed(6)},${(s.lat + dLat).toFixed(6)}&bboxSR=4326&imageSR=3857&size=${w},${h}&format=jpg&f=image`;
+  }
+  const addrText = (s) => [s.address, [s.town, s.zip ? 'SC ' + String(s.zip).slice(0, 5) : 'SC'].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+  // The address is the link: it opens Google Maps directions to the building itself.
+  function addrLink(s) {
+    const a = el('a', null, s.address ? addrText(s) : `${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`); a.href = gdir(s); a.target = '_blank'; a.rel = 'noopener';
+    if (s.addr_src === 'street range') a.title = 'House number estimated from the street’s Census address range; the link goes to the building itself.';
+    return a;
+  }
+  function addrCell(s) { const td = el('td'); td.append(addrLink(s)); return td; }
+  const gmaps = (s) => `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`;
+  const gsat = (s) => `https://www.google.com/maps/@${s.lat},${s.lon},160m/data=!3m1!1e3`;
+  const gdir = (s) => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
+
+  function drawMap(shown) {
+    if (!map) {
+      map = L.map('map', { scrollWheelZoom: false, zoomSnap: 0.25, preferCanvas: true, zoomControl: !PRINT }).fitBounds([[R.bbox[0], R.bbox[1]], [R.bbox[2], R.bbox[3]]]);
+      L.tileLayer(E + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors' }).addTo(map);
+      const g = L.featureGroup().addTo(map);
+      (R.shapes || []).forEach((s) => {
+        const st = { color: '#73213b', weight: 2, fillOpacity: 0.04, dashArray: s.type === 'corridor' ? '6 5' : null };
+        if (s.type === 'polygon') L.polygon(s.points, st).addTo(g);
+        if (s.type === 'circle') L.circle(s.center, Object.assign({ radius: s.miles * 1609.34 }, st)).addTo(g);
+        if (s.type === 'corridor') { L.polyline(s.line.map((p) => [p[1], p[2]]), { color: '#73213b', weight: 3, opacity: 0.6 }).addTo(g); s.line.forEach((p) => L.circle([p[1], p[2]], Object.assign({ radius: s.miles * 1609.34, stroke: false, fillOpacity: 0.03, fillColor: '#73213b' })).addTo(g)); }
+      });
+      (R.exits || []).forEach((e) => L.marker([e.lat, e.lon], { icon: L.divIcon({ className: '', html: `<div style="background:#1e5aa8;color:#fff;font:800 10px var(--sans);padding:1px 4px;border-radius:3px;border:1px solid #fff;white-space:nowrap">Exit ${e.mm}</div>`, iconSize: [44, 16], iconAnchor: [22, 8] }) }).addTo(map));
+      const frame = () => { map.invalidateSize(false); map.fitBounds([[R.bbox[0], R.bbox[1]], [R.bbox[2], R.bbox[3]]], { padding: [12, 12], animate: false }); };
+      frame();
+      if (!PRINT) { try { window.matchMedia('print').addEventListener('change', frame); } catch (e) {} window.addEventListener('beforeprint', frame); }
+      const lg = $('legend'); lg.textContent = '';
+      Object.entries(R.cats).forEach(([k, c]) => { const sp = el('span'); const d = el('span', 'dot'); d.style.cssText = `width:9px;height:9px;border-radius:50%;background:${COLORS[k]}`; sp.append(d, document.createTextNode(c.label)); lg.append(sp); });
+      const star = el('span'); star.innerHTML = starSvg('#006b46', 13) + ' on the board (green open bid, amber signal, blue relationship)'; lg.append(star);
+    }
+    if (layer) layer.remove();
+    layer = L.layerGroup().addTo(map);
+    const quick = mode === 'quick';
+    const order = quick ? dayPlan(shown).flat() : shown;
+    order.forEach((s, i) => {
+      const r = Math.max(4, Math.min(16, Math.sqrt(s.sqft || 3000) / 28));
+      if (quick) L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: `<div class="pin-num" style="width:22px;height:22px;background:${COLORS[s.cat]}">${i + 1}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).bindPopup(popup(s)).addTo(layer);
+      else L.circleMarker([s.lat, s.lon], { radius: r, color: '#fff', weight: 1, fillColor: COLORS[s.cat], fillOpacity: 0.85 }).bindPopup(popup(s)).addTo(layer);
+    });
+    const b = R.board;
+    [...b.open.map((o) => [o, 'Open bid']), ...b.signals.map((o) => [o, 'Signal']), ...b.targets.map((o) => [o, 'Relationship'])].forEach(([o, k]) => {
+      if (o.lat == null) return;
+      L.marker([o.lat, o.lon], { icon: L.divIcon({ className: 'star-pin', html: starSvg(k === 'Open bid' ? '#006b46' : k === 'Signal' ? '#8a5a00' : '#2f5d9b', 18), iconSize: [18, 18], iconAnchor: [9, 9] }) })
+        .bindPopup(`<b>${k}</b><br>${esc(o.title || o.org || '')}`).addTo(layer);
+    });
+  }
+  // A drawn star (not a text glyph): text shadows print as solid white boxes in PDFs.
+  const starSvg = (c, n) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" aria-hidden="true" style="display:block;overflow:visible"><path d="M12 1.8l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.9l-6.4 3.5 1.4-7.1-5.3-5 7.2-.9z" fill="${c}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const popup = (s) => `<b>${esc(s.name)}</b><br>${esc(R.cats[s.cat].label)}${s.sqft ? ' · ' + fmtN(s.sqft) + ' sq ft' : ''}<br><a href="${gdir(s)}" target="_blank" rel="noopener">${esc(addrText(s))}</a><br><a href="${gsat(s)}" target="_blank" rel="noopener">Satellite view</a>`;
+
+  function drawBoard() {
+    const box = $('board-card'); box.textContent = '';
+    const b = R.board;
+    box.append(el('h2', null, 'Already on our board here'));
+    const total = b.open.length + b.signals.length + b.targets.length + b.past.length + b.pipeline.length;
+    if (!total) box.append(el('p', 'muted', 'Nothing on the board is pinned inside this area yet.'));
+    const sec = (title, rows, cls, fn) => {
+      if (!rows.length) return;
+      box.append(el('h3', null, `${title} (${rows.length})`));
+      const l = el('div', 'board-list');
+      rows.forEach((o) => { const d = el('div', 'bi ' + cls); fn(d, o); l.append(d); });
+      box.append(l);
+    };
+    const link = (href, t) => { const a = el('a', null, t); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
+    sec('Open bids', b.open, 'open', (d, o) => { const t = el('b'); t.append(link('/bids#bid-' + o.key, o.title)); d.append(t, el('span', 'small', [o.agency, o.due ? 'due ' + fmtDate(o.due) : '', o.fit].filter(Boolean).join(' · '))); if (o.contact) d.append(el('span', 'small muted', o.contact)); });
+    sec('In the pipeline', b.pipeline, 'open', (d, o) => { const t = el('b'); t.append(link('/bid/' + encodeURIComponent(o.id), o.name)); d.append(t, el('span', 'small', [o.stage, o.agency, o.due ? 'due ' + fmtDate(o.due) : ''].filter(Boolean).join(' · '))); });
+    sec('Work coming (budgets, plans)', b.signals, 'signals', (d, o) => { d.append(el('b', null, o.title), el('span', 'small', [o.org, o.type, o.year, o.value].filter(Boolean).join(' · '))); });
+    sec('Relationships to work', b.targets, 'targets', (d, o) => { const t = el('b'); t.append(link('/relationships#org=' + o.key, o.org)); d.append(t, el('span', 'small', [o.type, o.why].filter(Boolean).join(' · '))); if (o.contact) d.append(el('span', 'small muted', o.contact)); });
+    sec('Bid roofing here before', b.past, '', (d, o) => { d.append(el('b', null, o.title), el('span', 'small', [o.agency, o.due ? 'was due ' + fmtDate(o.due) : ''].filter(Boolean).join(' · '))); });
+    if (b.buyers.length) {
+      box.append(el('h3', null, `Agencies that buy in ${(R.counties || []).join(' & ')} County (${b.buyers.length})`));
+      const p = el('p', 'small');
+      b.buyers.forEach((x, i) => { if (i) p.append(' · '); if (x.link) p.append(link(x.link, x.agency)); else p.append(x.agency); });
+      box.append(p);
+    }
+  }
+
+  function placeCard(s, n) {
+    const c = el('article', 'pcard');
+    const img = el('img'); img.alt = 'Satellite view of ' + s.name; img.loading = PRINT ? 'eager' : 'lazy'; img.src = satUrl(s);
+    const a = el('a'); a.href = gsat(s); a.target = '_blank'; a.rel = 'noopener'; a.append(img); c.append(a);
+    const d = el('div'); d.style.cssText = 'display:grid;gap:4px;min-width:0';
+    const t = el('div', 't');
+    if (n) t.append(el('span', 'num', n));
+    t.append(el('b', null, s.name));
+    t.append(el('span', 'tag' + (s.group === 'public' ? ' pub' : ''), R.cats[s.cat].label.replace(/s$/, '').replace(/ & .*/, '')));
+    if (s.board.some((b) => b.kind === 'open')) t.append(el('span', 'tag hot', 'Open bid'));
+    if (s.name_kind === 'owner') t.append(el('span', 'tag', 'named for the owner'));
+    d.append(t);
+    const f = el('div', 'facts');
+    const fact = (k, v) => { if (!v) return; const sp = el('span'); sp.append(el('b', null, k + ' '), document.createTextNode(v)); f.append(sp); };
+    fact('Roof', s.sqft ? `${fmtN(s.sqft)} sq ft${s.bldgs > 1 ? ` (${s.bldgs} bldgs)` : ''}` : 'size not mapped');
+    { const sp = el('span'); sp.append(el('b', null, 'Address '), addrLink(s)); f.append(sp); }
+    if (s.route && R.exits && R.exits.length) fact('Exit', `${s.route.exit} (${s.route.exit_mi} mi)`);
+    const i = s.info || {};
+    fact('Owner', i.owner); fact('Owner mails to', i.owner_mail); fact('Manager', i.manager); fact('Contact', i.contact); fact('Phone', i.phone); fact('Email', i.email); fact('Units', i.units); fact('Built', i.built && String(i.built).slice(0, 4));
+    if (i.denomination) fact('Denomination', i.denomination.replace(/_/g, ' '));
+    d.append(f);
+    if (s.also && s.also.length) d.append(el('div', 'small muted', 'Also here: ' + s.also.slice(0, 5).join(', ')));
+    if (s.why.length) d.append(el('div', 'why', s.why.join(' · ')));
+    d.append(el('div', 'how', R.cats[s.cat].how));
+    if (i.note) d.append(el('div', 'small muted', i.note));
+    const l = el('div', 'links');
+    const add = (href, t) => { if (!href) return; const x = el('a', null, t); x.href = href; x.target = '_blank'; x.rel = 'noopener'; l.append(x); };
+    add(gsat(s), 'Satellite view'); add(i.website, 'Website'); add(s.rec && s.rec.card, 'County property card'); add(s.owner_lookup, 'Look up the owner (county parcels)');
+    s.board.forEach((b) => add(b.kind === 'targets' ? '/relationships#org=' + b.key : b.kind === 'signals' ? '/work#sig-' + b.key : '/bids#bid-' + b.key, ({ open: 'Open bid', past: 'Past bid', signals: 'Signal', targets: 'Relationship' })[b.kind] + ' ' + b.key));
+    d.append(l);
+    c.append(d);
+    return c;
+  }
+
+  function drawQuick(shown) {
+    const days = dayPlan(shown);
+    const intro = el('div', 'card');
+    intro.append(el('h2', null, 'Best opportunities'), el('p', 'muted small', `The ${shown.length} places most worth a stop: biggest roofs, public buyers with bids, places hit by recent storms, and anything we already have going here. Ordered along the drive${R.exits && R.exits.length ? ' (by interstate mile)' : ''} and split into ${days.length} day${days.length > 1 ? 's' : ''}. Numbers match the map.`));
+    $('body').append(intro);
+    let n = 0;
+    days.forEach((list, di) => {
+      const sec = el('section', 'card day' + (di ? ' pagebreak' : ''));
+      const towns = [...new Set(list.map((s) => s.town).filter(Boolean))].slice(0, 5).join(', ');
+      sec.append(el('h3', null, `Day ${di + 1}${towns ? ': ' + towns : ''}`));
+      list.forEach((s) => sec.append(placeCard(s, ++n)));
+      $('body').append(sec);
+    });
+  }
+
+  function drawDeep(shown) {
+    const by = {}; shown.forEach((s) => { (by[s.cat] = by[s.cat] || []).push(s); });
+    const top = el('section', 'card day');
+    top.append(el('h3', null, 'Top 15 in the area'));
+    shown.slice(0, 15).forEach((s, i) => top.append(placeCard(s, i + 1)));
+    $('body').append(top);
+    Object.keys(R.cats).forEach((k) => {
+      const rows = by[k]; if (!rows || !rows.length) return;
+      const sec = el('section', 'card catsec pagebreak');
+      const head = el('div', 'row'); const dot = el('span', 'chip'); dot.style.cssText = `background:${COLORS[k]};width:12px;height:12px;padding:0;border:0`;
+      head.append(dot, el('h2', null, `${R.cats[k].label} (${rows.length})`));
+      sec.append(head, el('p', 'small muted', R.cats[k].how));
+      const tb = el('table', 'list');
+      tb.innerHTML = '<thead><tr><th>#</th><th>Place</th><th>Where</th><th class="r">Roof sq ft</th><th>Notes</th></tr></thead>';
+      const body = el('tbody');
+      const cap = PRINT ? rows.length : Math.min(rows.length, 300);
+      rows.slice(0, cap).forEach((s, i) => {
+        const tr = el('tr');
+        const i_ = s.info || {};
+        tr.append(el('td', 'muted', String(i + 1)));
+        const nm = el('td'); const b = el('a', null, s.name); b.href = gsat(s); b.target = '_blank'; b.rel = 'noopener'; b.style.fontWeight = '700'; nm.append(b);
+        if (s.board.some((x) => x.kind === 'open')) nm.append(' ', el('span', 'tag hot', 'Open bid'));
+        const contact = [i_.owner && i_.owner !== s.name ? 'Owner: ' + i_.owner : '', i_.owner_mail ? 'mails to ' + i_.owner_mail : '', i_.manager, i_.contact, i_.phone].filter(Boolean).join(' · ');
+        if (contact) nm.append(el('div', 'small muted', contact));
+        tr.append(nm);
+        tr.append(addrCell(s));
+        tr.append(el('td', 'r', s.sqft ? fmtN(s.sqft) + (s.bldgs > 1 ? ` (${s.bldgs})` : '') : '—'));
+        const notes = [...s.why]; if (s.route && R.exits && R.exits.length && s.route.exit_mi <= 6 && !notes.some((w) => /exit/.test(w))) notes.push(`exit ${s.route.exit} (${s.route.exit_mi} mi)`);
+        if (s.also.length) notes.push('also: ' + s.also.slice(0, 3).join(', '));
+        tr.append(el('td', 'small', notes.join(' · ')));
+        body.append(tr);
+      });
+      tb.append(body); sec.append(tb);
+      if (cap < rows.length) sec.append(el('p', 'small muted', `Showing ${cap} of ${rows.length}. The PDF has all of them; or narrow with the roof-size filter.`));
+      $('body').append(sec);
+    });
+  }
+
+  function drawSources() {
+    const box = $('sources'); box.textContent = '';
+    box.append(el('b', null, 'Where this comes from. '));
+    box.append(document.createTextNode(R.sources.map((s) => `${s.name} (${fmtN(s.count)})`).join(' · ') + '. '));
+    const dr = Object.entries(R.dropped || {}).filter(([, n]) => n);
+    if (dr.length) box.append(document.createTextNode(`Left out as not real leads: ${dr.map(([k, n]) => `${fmtN(n)} ${k}`).join('; ')}. `));
+    box.append(document.createTextNode(`Storm reports: NOAA, within 3 miles since ${fmtDate(R.storm_window)}. Roof sizes are building footprints (the roof is usually a little bigger). Built ${fmtDate(R.built)}. Areas are saved in data/areas.json; refresh any time from this page.`));
+  }
+
+  if (areaId) reportView(); else listView();
+})();
+</script>
+</body>
+</html>

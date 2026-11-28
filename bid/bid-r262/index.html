@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<script src="/_app/gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bid · Magnolia Admin</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/shell.css">
+<script src="/js/topbar.js" defer></script>
+<script src="/js/fieldsheet.js" defer></script>
+<script src="/js/bidsheet.js" defer></script>
+<style>
+:root {
+  color-scheme: light;
+  --mist: #f3f4f7; --paper: #fff; --line: #e1e4ea; --line2: #eceef2;
+  --ink: #2b2326; --body: #4a4347; --slate: #6b6f78;
+  --mag: #73213b; --mag-soft: #f6eef1; --leaf: #006b46; --leaf-soft: #e8f3ee;
+  --amber: #8a5a00; --amber-soft: #fbf3e2; --red: #b3261e; --red-soft: #fbeceb;
+  --serif: 'MG PT Serif', 'PT Serif', Georgia, serif;
+  --sans: 'MG Manrope', Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+body { background: var(--mist); color: var(--body); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+.wrap { padding: clamp(16px, 3.5vw, 40px); padding-bottom: 64px; display: grid; gap: 22px; max-width: 1280px; margin: 0 auto; }
+h1, h2, h3 { color: var(--ink); margin: 0; text-wrap: balance; }
+h1 { font-family: var(--serif); font-size: clamp(22px, 3vw, 30px); line-height: 1.2; }
+h2 { font-family: var(--serif); font-size: 20px; }
+h3 { font-size: 14px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--mag); }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(43,35,38,.06), 0 4px 14px rgba(43,35,38,.06); min-width: 0; }
+.back { font-size: 13px; font-weight: 600; text-decoration: none; }
+.top { display: grid; gap: 10px; }
+.meta { color: var(--slate); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--mist); color: var(--ink); white-space: nowrap; }
+.chip.hot { background: var(--red-soft); color: var(--red); }
+.chip.warn { background: var(--amber-soft); color: var(--amber); }
+.chip.ok { background: var(--leaf-soft); color: var(--leaf); }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+.ctl label { display: grid; gap: 3px; font-size: 11.5px; font-weight: 700; color: var(--slate); text-transform: uppercase; letter-spacing: .04em; }
+input, select, textarea { font: 14px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; box-sizing: border-box; }
+textarea { width: 100%; resize: vertical; min-height: 120px; }
+.saving { font-size: 12.5px; color: var(--slate); min-height: 1em; }
+.alert { border-left: 4px solid var(--red); background: var(--red-soft); color: var(--ink); padding: 12px 14px; border-radius: 8px; font-size: 14px; }
+.alert b { color: var(--red); }
+
+.grid { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.side { display: grid; gap: 22px; min-width: 0; }
+.side > * { min-width: 0; }
+@media (max-width: 900px) { .side { position: static; } }
+
+/* timeline */
+.tl { list-style: none; margin: 14px 0 0; padding: 0; position: relative; }
+.tl::before { content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.tl li { position: relative; padding: 0 0 14px 28px; }
+.tl li::before { content: ''; position: absolute; left: 1px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--paper); border: 2px solid var(--slate); }
+.tl li.hard::before { border-color: var(--red); background: var(--red); }
+.tl li.done { opacity: .55; }
+.tl li.done::before { background: var(--slate); border-color: var(--slate); }
+.tl li.today-mark { padding-bottom: 14px; }
+.tl li.today-mark::before { width: 14px; height: 14px; left: -1px; top: 3px; border-color: var(--leaf); background: var(--leaf); }
+.tl .d { font-size: 12px; font-weight: 700; color: var(--slate); text-transform: uppercase; letter-spacing: .03em; }
+.tl .d .in { text-transform: none; letter-spacing: 0; font-weight: 600; margin-left: 6px; }
+.tl .d .in.hot { color: var(--red); }
+.tl .l { font-weight: 700; color: var(--ink); font-size: 14px; }
+.tl .n { font-size: 13px; color: var(--slate); }
+.tl .today-mark .l { color: var(--leaf); }
+
+/* facts */
+.facts { display: grid; grid-template-columns: minmax(70px, max-content) minmax(0, 1fr); gap: 6px 12px; margin: 12px 0 0; font-size: 13.5px; }
+.facts dt { font-weight: 700; color: var(--ink); }
+.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.facts dt { overflow-wrap: anywhere; }
+
+/* checklist */
+.prog { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.bar { flex: 1; height: 8px; border-radius: 99px; background: var(--line2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--leaf); }
+.filter { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.filter button { font: 600 12.5px var(--sans); border: 1px solid var(--line); background: var(--paper); color: var(--slate); padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+.filter button[aria-pressed=true] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.phase { margin-top: 18px; }
+.phase h3 { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line2); padding-bottom: 6px; }
+.phase h3 span { color: var(--slate); font-weight: 600; font-size: 12.5px; }
+.tasks { list-style: none; margin: 0; padding: 0; }
+.task { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 4px 10px; align-items: start; padding: 9px 0; border-bottom: 1px solid var(--line2); }
+.task input[type=checkbox] { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--leaf); cursor: pointer; }
+.task .t { color: var(--ink); font-size: 14.5px; }
+.task .t[contenteditable=true]:focus { outline: 2px solid var(--mag-soft); border-radius: 4px; }
+.task .note { grid-column: 2; font-size: 12.5px; color: var(--slate); }
+.task.done .t { text-decoration: line-through; color: var(--slate); }
+.task .r { display: flex; gap: 6px; align-items: center; }
+.task .due { font-size: 12px; padding: 3px 6px; width: 132px; }
+.task .due.late { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+.task .due.soon { border-color: #e7cf9d; background: var(--amber-soft); }
+.task .who { font-size: 12px; padding: 3px 6px; width: 84px; }
+.task .x { border: 0; background: none; color: var(--slate); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+.task .x:hover { color: var(--red); background: var(--red-soft); }
+@media (max-width: 560px) { .task { grid-template-columns: 22px 1fr; } .task .r { grid-column: 2; } }
+.add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.add input[name=text] { flex: 1 1 260px; }
+.btn { font: 700 13px var(--sans); border: 0; background: var(--mag); color: #fff; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+.btn.ghost { background: none; color: var(--mag); border: 1px solid var(--mag); }
+.empty { color: var(--slate); padding: 16px 0; }
+.files .drop { margin-top: 10px; border: 2px dashed var(--line); border-radius: 10px; padding: 8px 10px; min-height: 54px; display: grid; gap: 2px; }
+.files .drop.over { border-color: var(--mag); background: var(--mag-soft); }
+.files .drop .muted { margin: 8px 4px; color: var(--slate); font-size: 13.5px; }
+.files .frow { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid var(--line2); min-width: 0; }
+.files .frow:last-child { border-bottom: 0; }
+.files .fname { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.files .fname:hover span:last-child { text-decoration: underline; }
+.files .ficon { flex: none; font: 800 10px var(--sans); letter-spacing: .04em; color: #fff; background: var(--mag); border-radius: 5px; padding: 4px 6px; }
+.files .fmeta { flex: none; font-size: 12.5px; color: var(--slate); }
+.files .fdel { flex: none; border: 0; background: none; color: var(--slate); font: 700 16px var(--sans); cursor: pointer; padding: 2px 8px; border-radius: 6px; }
+.files .fdel:hover, .files .fdel[data-armed] { color: #b3261e; background: #fbeceb; font-size: 12.5px; }
+.wrap > * { min-width: 0; }
+.chip { white-space: normal; overflow-wrap: anywhere; }
+.task .t, .task .note { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 600px) {
+  .task { grid-template-columns: 22px minmax(0, 1fr); }
+  .task .r { grid-column: 2; flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<header class="topbar" data-page="pipeline"></header>
+<div class="wrap" id="app"><p class="empty">Loading…</p></div>
+
+<script>
+(() => {
+  const id = decodeURIComponent(location.pathname.replace(/^\/bid\/?/, '').replace(/\/$/, ''));
+  const app = document.getElementById('app');
+  const STAGES = [['watching', 'Watching'], ['going', 'Going to bid'], ['submitted', 'Submitted'], ['won', 'Won'], ['closed', 'Lost / passed']];
+  const DEFAULT_PHASES = ['Go / no-go', 'Site visit', 'Questions', 'Pricing', 'Bid package', 'Deliver', 'If we win'];
+  // Starter list for any public bid that doesn't have its own checklist yet.
+  const STARTER = [
+    ['Go / no-go', 'Read the whole solicitation and note every deadline'],
+    ['Go / no-go', 'Confirm license classification covers this size of job'],
+    ['Go / no-go', 'Call surety: bid bond and bonding capacity'],
+    ['Site visit', 'Attend pre-bid / site visit (check if mandatory)'],
+    ['Questions', 'Email questions before the question deadline'],
+    ['Pricing', 'Measure / take off quantities from drawings'],
+    ['Pricing', 'Get material and sub quotes'],
+    ['Bid package', 'Fill out bid form: every blank, alternates, unit prices'],
+    ['Bid package', 'Acknowledge every addendum'],
+    ['Bid package', 'Bid bond with power of attorney'],
+    ['Deliver', 'Deliver sealed bid before the deadline'],
+  ];
+  let card = null, editing = false, filter = 'open', lastSig = '';
+
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const days = (d) => Math.round((new Date(d + 'T12:00:00') - new Date(today() + 'T12:00:00')) / 864e5);
+  const fmt = (d, opt) => { const x = new Date(d + 'T12:00:00'); return isNaN(x) ? d : x.toLocaleDateString(undefined, opt || { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const inDays = (n) => n === 0 ? 'today' : n === 1 ? 'tomorrow' : n === -1 ? 'yesterday' : n > 0 ? 'in ' + n + ' days' : Math.abs(n) + ' days ago';
+  const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
+  const uid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  async function load() {
+    const r = await fetch('/api/col/pipeline'); const j = await r.json();
+    const d = j.docs.find((x) => x.id === id);
+    return d ? d.data : null;
+  }
+  async function save(patch, msg) {
+    if (msg) msg.textContent = 'Saving…';
+    patch.updated = new Date().toISOString();
+    try {
+      const r = await fetch('/api/col/pipeline/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
+      if (!r.ok) throw new Error(await r.text());
+      // keep our own card object (task rows hold references into it); just remember what the server has now
+      const j = await r.json(); Object.keys(patch).forEach((k) => { card[k] = patch[k]; }); lastSig = JSON.stringify(j.data);
+      if (msg) { msg.textContent = 'Saved'; setTimeout(() => { if (msg.textContent === 'Saved') msg.textContent = ''; }, 1500); }
+    } catch (e) { if (msg) msg.textContent = 'Couldn’t save. Is server.py running?'; }
+  }
+  const saveTasks = (msg) => save({ tasks: card.tasks }, msg);
+
+  function header() {
+    const top = el('section', 'top');
+    const back = el('a', 'back', '← Pipeline'); back.href = '/pipeline'; top.append(back);
+    top.append(el('h1', null, card.name));
+    top.append(el('p', 'meta', [card.agency, card.county ? card.county + ' County' : '', card.sol_no ? 'No. ' + card.sol_no : ''].filter(Boolean).join(' · ')));
+    const chips = el('div', 'chips');
+    if (card.due) { const n = days(card.due); chips.append(el('span', 'chip ' + (n < 0 ? '' : n <= 7 ? 'hot' : 'warn'), (n < 0 ? 'Was due ' : 'Bid due ') + fmt(card.due) + (card.due_time ? ' ' + card.due_time : '') + ' · ' + inDays(n))); }
+    const next = (card.timeline || []).filter((m) => m.date >= today() && m.hard).sort((a, b) => a.date.localeCompare(b.date))[0];
+    if (next && next.date !== card.due) chips.append(el('span', 'chip hot', 'Next: ' + next.label + ' · ' + fmt(next.date) + ' · ' + inDays(days(next.date))));
+    const t = card.tasks || [], done = t.filter((x) => x.done).length;
+    if (t.length) chips.append(el('span', 'chip ' + (done === t.length ? 'ok' : ''), done + ' of ' + t.length + ' tasks done'));
+    top.append(chips);
+    const ctl = el('div', 'ctl'), msg = el('span', 'saving');
+    const lab = (txt, ctlEl) => { const l = el('label', null, txt); l.append(ctlEl); return l; };
+    const st = el('select'); STAGES.forEach(([v, t]) => st.append(new Option(t, v))); st.value = card.stage || 'watching';
+    st.addEventListener('change', () => save({ stage: st.value }, msg));
+    const ow = el('input'); ow.value = card.owner || ''; ow.placeholder = 'Who’s running it'; ow.addEventListener('change', () => save({ owner: ow.value.trim() }, msg));
+    const amt = el('input'); amt.value = card.bid_amount || ''; amt.placeholder = '$'; amt.style.width = '130px'; amt.addEventListener('change', () => save({ bid_amount: amt.value.trim() }, msg));
+    ctl.append(lab('Stage', st), lab('Owner', ow), lab('Our bid', amt));
+    const pdf = el('button', 'btn', 'Download prep sheet (PDF)'); pdf.type = 'button'; pdf.title = 'Printable: meeting, site maps, questions, schedule, checklist';
+    pdf.addEventListener('click', async () => {
+      if (!window.MGBidSheet) { msg.textContent = 'PDF tools still loading…'; return; }
+      pdf.disabled = true; const label = pdf.textContent;
+      try { await window.MGBidSheet.download(card, (t) => { pdf.textContent = t; }); }
+      catch (e) { if (!(e && e.code === 'declined')) { console.error('prep sheet', e); msg.textContent = 'Couldn’t make the PDF. Try again.'; } }
+      finally { pdf.disabled = false; pdf.textContent = label; }
+    });
+    ctl.append(pdf);
+    const ext = (href, label) => { const a = el('a', 'btn ghost', label); a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.style.textDecoration = 'none'; ctl.append(a); };
+    if (/^https?:/.test(card.link || '')) ext(card.link, /\.pdf($|[?#])/i.test(card.link) ? 'Bid documents (PDF) ↗' : 'Open posting ↗');
+    if (/^https?:/.test(card.posting || '') && card.posting !== card.link) ext(card.posting, 'Postings page ↗');
+    ctl.append(msg);
+    top.append(ctl);
+    if (card.alert) { const a = el('div', 'alert'); a.innerHTML = ''; const b = el('b', null, 'Go / no-go: '); a.append(b, document.createTextNode(card.alert)); top.append(a); }
+    return top;
+  }
+
+  function timeline() {
+    const c = el('section', 'card');
+    c.append(el('h2', null, 'Timeline'));
+    const items = (card.timeline || []).slice().sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+    if (!items.length) { c.append(el('p', 'empty', 'No dates yet. Add the due date and pre-bid on the Pipeline card.')); return c; }
+    const ol = el('ol', 'tl'); let marked = false;
+    const t0 = today();
+    items.forEach((m) => {
+      if (!marked && m.date > t0) { const li = el('li', 'today-mark'); li.append(el('div', 'd', fmt(t0)), el('div', 'l', 'Today')); ol.append(li); marked = true; }
+      const li = el('li', (m.hard ? 'hard' : '') + (m.date < t0 ? ' done' : ''));
+      const d = el('div', 'd', fmt(m.date) + (m.time ? ' · ' + m.time : ''));
+      if (m.date >= t0) { const n = days(m.date); d.append(el('span', 'in' + (m.hard && n <= 3 ? ' hot' : ''), inDays(n))); }
+      li.append(d, el('div', 'l', m.label));
+      if (m.note) li.append(el('div', 'n', m.note));
+      ol.append(li);
+    });
+    if (!marked) { const li = el('li', 'today-mark'); li.append(el('div', 'd', fmt(t0)), el('div', 'l', 'Today')); ol.append(li); }
+    c.append(ol);
+    return c;
+  }
+
+  function facts() {
+    const f = card.facts || []; if (!f.length) return null;
+    const c = el('section', 'card'); c.append(el('h2', null, 'Key facts'));
+    const dl = el('dl', 'facts');
+    f.forEach(({ k, v }) => {   // web addresses in a fact become links
+      const dd = el('dd');
+      String(v || '').split(/(https?:\/\/\S+)/).forEach((part, i) => {
+        if (i % 2) { const a = el('a', null, /\.pdf$/i.test(part) ? decodeURIComponent(part.split('/').pop()).replace(/^Postings\//, '') + ' ↗' : (part.length > 45 ? part.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0] + ' ↗' : part)); a.title = part; a.href = part; a.target = '_blank'; a.rel = 'noopener'; dd.append(a); }
+        else if (part) dd.append(document.createTextNode(part));
+      });
+      dl.append(el('dt', null, k), dd);
+    });
+    c.append(dl); return c;
+  }
+
+  function checklist() {
+    const c = el('section', 'card');
+    const tasks = card.tasks || [];
+    const head = el('div'); head.style.cssText = 'display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline';
+    head.append(el('h2', null, 'To do'));
+    const msg = el('span', 'saving'); head.append(msg); c.append(head);
+    if (!tasks.length) {
+      c.append(el('p', 'empty', 'No checklist yet.'));
+      const b = el('button', 'btn', 'Start with the standard public-bid checklist'); b.type = 'button';
+      b.addEventListener('click', () => { card.tasks = STARTER.map(([phase, text]) => ({ id: uid(), phase, text, due: '', done: false })); saveTasks(msg).then(render); });
+      c.append(b);
+    } else {
+      const done = tasks.filter((t) => t.done).length;
+      const prog = el('div', 'prog'), bar = el('div', 'bar'), i = el('i'); i.style.width = (done / tasks.length * 100) + '%'; bar.append(i);
+      prog.append(bar, el('span', 'saving', Math.round(done / tasks.length * 100) + '%')); c.append(prog);
+      const fl = el('div', 'filter');
+      [['open', 'Open · ' + (tasks.length - done)], ['all', 'All · ' + tasks.length], ['week', 'Due in 7 days'], ['done', 'Done · ' + done]].forEach(([k, t]) => {
+        const b = el('button', null, t); b.type = 'button'; b.setAttribute('aria-pressed', String(filter === k));
+        b.addEventListener('click', () => { filter = k; render(); }); fl.append(b);
+      });
+      c.append(fl);
+      const phases = [...new Set([...(card.phases || DEFAULT_PHASES), ...tasks.map((t) => t.phase || 'Other')])];
+      const show = (t) => filter === 'all' || (filter === 'done' ? t.done : !t.done && (filter !== 'week' || (t.due && days(t.due) <= 7)));
+      let any = false;
+      phases.forEach((ph) => {
+        const all = tasks.filter((t) => (t.phase || 'Other') === ph); const rows = all.filter(show);
+        if (!rows.length) return; any = true;
+        const sec = el('div', 'phase'); const h = el('h3', null, ph); h.append(el('span', null, all.filter((t) => t.done).length + '/' + all.length)); sec.append(h);
+        const ul = el('ul', 'tasks');
+        rows.sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999')).forEach((t) => ul.append(taskRow(t, msg)));
+        sec.append(ul); c.append(sec);
+      });
+      if (!any) c.append(el('p', 'empty', filter === 'done' ? 'Nothing checked off yet.' : 'Nothing here. Nice.'));
+    }
+    // add a task
+    const f = el('form', 'add');
+    const tx = el('input'); tx.name = 'text'; tx.placeholder = 'Add a task…'; tx.required = true;
+    const ph = el('select'); [...new Set([...(card.phases || DEFAULT_PHASES), ...tasks.map((t) => t.phase || 'Other')])].forEach((p) => ph.append(new Option(p, p)));
+    const du = el('input'); du.type = 'date'; du.setAttribute('aria-label', 'Due date');
+    const go = el('button', 'btn', 'Add'); go.type = 'submit';
+    f.append(tx, ph, du, go);
+    f.addEventListener('submit', (e) => { e.preventDefault(); const text = tx.value.trim(); if (!text) return; card.tasks = (card.tasks || []).concat({ id: uid(), text, phase: ph.value, due: du.value, done: false }); filter = filter === 'done' ? 'open' : filter; saveTasks(msg).then(render); });
+    c.append(f);
+    return c;
+  }
+
+  function taskRow(t, msg) {
+    const li = el('li', 'task' + (t.done ? ' done' : ''));
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.setAttribute('aria-label', 'Done: ' + t.text);
+    cb.addEventListener('change', () => { t.done = cb.checked; t.done_on = cb.checked ? today() : ''; saveTasks(msg).then(render); });
+    const tx = el('div', 't', t.text); tx.contentEditable = 'true'; tx.spellcheck = true;
+    tx.addEventListener('focus', () => { editing = true; });
+    tx.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tx.blur(); } });
+    tx.addEventListener('blur', () => { editing = false; const v = tx.textContent.trim(); if (v && v !== t.text) { t.text = v; saveTasks(msg); } else tx.textContent = t.text; });
+    const r = el('div', 'r');
+    const du = el('input', 'due'); du.type = 'date'; du.value = t.due || ''; du.setAttribute('aria-label', 'Due date for ' + t.text);
+    if (t.due && !t.done) { const n = days(t.due); if (n < 0) du.classList.add('late'); else if (n <= 2) du.classList.add('soon'); }
+    du.addEventListener('change', () => { t.due = du.value; saveTasks(msg).then(render); });
+    const who = el('input', 'who'); who.value = t.who || ''; who.placeholder = 'Who'; who.setAttribute('aria-label', 'Who is doing ' + t.text);
+    who.addEventListener('focus', () => { editing = true; }); who.addEventListener('blur', () => { editing = false; });
+    who.addEventListener('change', () => { t.who = who.value.trim(); saveTasks(msg); });
+    const x = el('button', 'x', '×'); x.type = 'button'; x.title = 'Delete task'; x.setAttribute('aria-label', 'Delete task: ' + t.text);
+    x.addEventListener('click', () => { if (x.dataset.armed) { card.tasks = card.tasks.filter((y) => y !== t); saveTasks(msg).then(render); return; } x.dataset.armed = '1'; x.textContent = 'Delete?'; x.style.fontSize = '12px'; setTimeout(() => { x.dataset.armed = ''; x.textContent = '×'; x.style.fontSize = ''; }, 3000); });
+    r.append(du, who, x);
+    li.append(cb, tx, r);
+    if (t.note) li.append(el('div', 'note', t.note));
+    return li;
+  }
+
+  // ---- Files: drop or pick files to attach them to this bid (saved in data/files/<card id>/) ----
+  const fmtSize = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
+  const icon = (t, n) => /pdf/i.test(t) || /\.pdf$/i.test(n) ? 'PDF' : /image/.test(t) ? 'IMG' : /sheet|excel|csv/i.test(t) || /\.(xlsx?|csv)$/i.test(n) ? 'XLS' : /word|document/i.test(t) || /\.docx?$/i.test(n) ? 'DOC' : 'FILE';
+  async function upload(list, msg) {
+    for (const f of list) {
+      msg.textContent = 'Uploading ' + f.name + '…';
+      try {
+        const r = await fetch('/api/files/' + encodeURIComponent(id) + '?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'X-File-Type': f.type || '', 'X-User': (() => { try { return (localStorage.getItem('mg-who') || '').slice(0, 60); } catch (e) { return ''; } })() } });
+        const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText);
+        card.files = j.data.files;
+      } catch (e) { msg.textContent = 'Couldn’t upload ' + f.name + ': ' + e.message; return; }
+    }
+    msg.textContent = 'Saved'; render();
+  }
+  function files() {
+    const c = el('section', 'card files'); const msg = el('span', 'saving');
+    const h = el('div'); h.style.cssText = 'display:flex;justify-content:space-between;gap:12px;align-items:center';
+    const pick = el('input'); pick.type = 'file'; pick.multiple = true; pick.hidden = true; pick.addEventListener('change', () => { if (pick.files.length) upload([...pick.files], msg); });
+    const add = el('button', 'btn ghost', '+ Add files'); add.type = 'button'; add.addEventListener('click', () => pick.click());
+    const right = el('div'); right.style.cssText = 'display:flex;gap:10px;align-items:center'; right.append(msg, add, pick);
+    h.append(el('h2', null, 'Files'), right); c.append(h);
+    const drop = el('div', 'drop');
+    const list = card.files || [];
+    if (!list.length) drop.append(el('p', 'muted', 'Drop bid documents, addenda, photos or your proposal here.'));
+    list.forEach((f) => {
+      const row = el('div', 'frow');
+      const a = el('a', 'fname'); a.href = '/files/' + encodeURIComponent(id) + '/' + encodeURIComponent(f.name); a.target = '_blank'; a.rel = 'noopener';
+      a.append(el('span', 'ficon', icon(f.type, f.name)), el('span', null, f.name)); row.append(a);
+      row.append(el('span', 'fmeta', [fmtSize(f.size || 0), f.added ? new Date(f.added).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '', f.by].filter(Boolean).join(' · ')));
+      const del = el('button', 'fdel', '×'); del.type = 'button'; del.title = 'Remove this file';
+      del.addEventListener('click', async () => {
+        if (!del.dataset.armed) { del.dataset.armed = '1'; del.textContent = 'Remove?'; setTimeout(() => { delete del.dataset.armed; del.textContent = '×'; }, 3000); return; }
+        try { const r = await fetch('/api/files/' + encodeURIComponent(id) + '/' + encodeURIComponent(f.name), { method: 'DELETE' }); const j = await r.json(); card.files = j.data.files; render(); } catch (e) { msg.textContent = 'Couldn’t remove it.'; }
+      });
+      row.append(del); drop.append(row);
+    });
+    ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); if (ev === 'dragleave' && drop.contains(e.relatedTarget)) return; drop.classList.remove('over'); }));
+    drop.addEventListener('drop', (e) => { const fl = [...(e.dataTransfer.files || [])]; if (fl.length) upload(fl, msg); });
+    c.append(drop); return c;
+  }
+
+  function notes() {
+    const c = el('section', 'card'); const msg = el('span', 'saving');
+    const h = el('div'); h.style.cssText = 'display:flex;justify-content:space-between;gap:12px'; h.append(el('h2', null, 'Notes'), msg); c.append(h);
+    const ta = el('textarea'); ta.value = card.notes || ''; ta.style.marginTop = '10px'; ta.rows = 6;
+    ta.addEventListener('focus', () => { editing = true; }); ta.addEventListener('blur', () => { editing = false; });
+    ta.addEventListener('change', () => save({ notes: ta.value }, msg));
+    c.append(ta); return c;
+  }
+
+  function render() {
+    if (!card) return;
+    document.title = card.name + ' · Magnolia Admin';
+    // timeline always includes the bid due date and pre-bid from the card itself
+    const tl = (card.timeline || []).slice();
+    if (card.due && !tl.some((m) => m.date === card.due && /bid due|submit|deliver/i.test(m.label))) tl.push({ date: card.due, label: 'Bid due', hard: true });
+    if (card.prebid && !tl.some((m) => m.date === card.prebid.slice(0, 10))) tl.push({ date: card.prebid.slice(0, 10), label: 'Pre-bid meeting', hard: true });
+    const view = Object.assign({}, card, { timeline: tl });
+    const keep = card; card = view;
+    const side = el('aside', 'side'); side.append(timeline()); const fx = facts(); if (fx) side.append(fx);
+    const main = el('div'); main.style.cssText = 'display:grid;gap:22px;min-width:0'; card = keep; main.append(checklist(), files(), notes());
+    card = view; const top = header(); card = keep;
+    const grid = el('div', 'grid'); grid.append(side, main);
+    app.replaceChildren(top, grid);
+  }
+
+  async function refresh() {
+    if (editing || document.hidden) return;
+    try { const d = await load(); const sig = JSON.stringify(d); if (sig !== lastSig) { lastSig = sig; card = d; render(); } } catch (e) {}
+  }
+  (async () => {
+    try { card = await load(); } catch (e) { app.replaceChildren(el('p', 'empty', 'Can’t reach the local server. Is python3 server.py still running?')); return; }
+    if (!card) { app.replaceChildren(el('p', 'empty', 'No pipeline card called ' + id + '.')); return; }
+    lastSig = JSON.stringify(card); render();
+    setInterval(refresh, 8000);
+  })();
+})();
+</script>
+</body>
+</html>

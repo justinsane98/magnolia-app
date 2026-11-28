@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<script src="/_app/gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network · Magnolia Admin</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/shell.css">
+<script src="/js/topbar.js" defer></script>
+<script src="/js/d3.v7.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --mist: #f3f4f7; --paper: #fff; --line: #e1e4ea; --line2: #eceef2;
+  --ink: #2b2326; --body: #4a4347; --slate: #6b6f78;
+  --mag: #73213b; --mag-soft: #f6eef1; --leaf: #006b46; --leaf-soft: #e8f3ee;
+  --amber: #8a5a00; --amber-soft: #fbf3e2; --red: #b3261e; --red-soft: #fbeceb;
+  --serif: 'MG PT Serif', 'PT Serif', Georgia, serif;
+  --sans: 'MG Manrope', Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+body { background: var(--mist); color: var(--body); font-family: var(--sans); font-size: 14.5px; line-height: 1.45; margin: 0; }
+.wrap { padding: clamp(14px, 2.5vw, 28px); display: grid; gap: 16px; max-width: 1600px; margin: 0 auto; }
+h1 { font-family: var(--serif); color: var(--ink); font-size: clamp(22px, 3vw, 30px); margin: 0; }
+h2 { font-family: var(--serif); color: var(--ink); font-size: 17px; margin: 0 0 8px; }
+p { margin: 0; }
+.sub { color: var(--slate); max-width: 900px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(43,35,38,.06), 0 4px 14px rgba(43,35,38,.06); min-width: 0; }
+.graph { padding: 0; overflow: hidden; position: relative; }
+#svg { width: 100%; height: min(78vh, 820px); display: block; background: radial-gradient(circle at 50% 50%, #fff 0, #fafafc 70%); cursor: grab; touch-action: none; }
+#svg:active { cursor: grabbing; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line2); font-size: 13px; }
+.tools label { display: inline-flex; gap: 6px; align-items: center; color: var(--body); }
+.tools .sp { flex: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 14px; border-top: 1px solid var(--line2); font-size: 12px; color: var(--slate); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.legend i.ring { background: #fff; border: 2.5px solid; width: 7px; height: 7px; }
+.side { display: grid; gap: 16px; }
+input, select, textarea { font: inherit; font-size: 13.5px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; background: #fff; color: var(--ink); min-width: 0; }
+textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row > input, .row > select { flex: 1 1 140px; }
+.btn { font: 700 13px var(--sans); border: 0; background: var(--mag); color: #fff; padding: 8px 13px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.btn.ghost { background: none; color: var(--mag); border: 1px solid var(--mag); }
+.btn.small { padding: 5px 10px; font-size: 12px; }
+.btn.danger { background: none; color: var(--red); border: 1px solid #e3b4b0; }
+.muted { color: var(--slate); font-size: 12.5px; }
+.list { display: grid; gap: 6px; max-height: 360px; overflow: auto; margin-top: 6px; }
+.dec { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.dec:hover, .dec.on { background: var(--mist); border-color: var(--line); }
+.dec b { color: var(--ink); font-weight: 700; }
+.deg { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 13px var(--sans); background: var(--mist); color: var(--slate); }
+.deg.d1 { background: var(--leaf); color: #fff; } .deg.d2 { background: var(--leaf-soft); color: var(--leaf); }
+.deg.d3 { background: var(--amber-soft); color: var(--amber); } .deg.d4 { background: var(--red-soft); color: var(--red); }
+.path { display: grid; gap: 0; margin-top: 8px; }
+.path .hop { display: flex; gap: 8px; align-items: baseline; }
+.path .hop b { color: var(--ink); }
+.path .rel { margin-left: 13px; padding: 2px 0 2px 14px; border-left: 2px dashed #c9ccd4; color: var(--slate); font-size: 12px; }
+.chip { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--mist); color: var(--slate); margin: 2px 4px 2px 0; }
+.chip.dec { background: var(--mag-soft); color: var(--mag); display: inline-block; padding: 2px 8px; }
+.conn { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line2); font-size: 13px; }
+.conn a { color: var(--ink); font-weight: 600; text-decoration: none; cursor: pointer; }
+.conn button { border: 0; background: none; color: var(--slate); cursor: pointer; font-size: 15px; }
+.kv { display: grid; grid-template-columns: 70px minmax(0,1fr); gap: 6px 8px; align-items: center; margin: 8px 0; font-size: 13px; }
+.kv span { color: var(--slate); font-size: 12px; }
+.empty { color: var(--slate); font-style: italic; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 50; }
+.tip { position: absolute; pointer-events: none; background: rgba(43,35,38,.92); color: #fff; font-size: 12px; padding: 6px 9px; border-radius: 6px; max-width: 260px; display: none; }
+svg text { font-family: var(--sans); pointer-events: none; }
+.mg [hidden] { display: none !important; }
+</style>
+</head>
+<body class="mg">
+<header class="topbar" data-page="network"></header>
+<div class="wrap">
+  <section>
+    <h1>Network</h1>
+    <p class="sub">Who Joe knows, what they belong to, and how many introductions it takes to reach the people who decide our bids. Rings show distance from Joe: green is one step, then amber, then red. Grey dashed means there's no path yet. Bid contacts on the Pipeline show up automatically.</p>
+  </section>
+  <div class="grid">
+    <section class="card graph">
+      <div class="tools">
+        <label><input type="checkbox" id="t-open"> Contacts on every open bid</label>
+        <label><input type="checkbox" id="t-labels" checked> Names</label>
+        <label>Show <select id="t-depth"><option value="99">everyone</option><option value="2">within 2 steps</option><option value="3">within 3 steps</option><option value="4">within 4 steps</option></select></label>
+        <span class="sp"></span>
+        <button class="btn ghost small" id="t-fit" type="button">Fit everyone</button>
+      </div>
+      <svg id="svg" aria-label="Network graph"></svg>
+      <div class="tip" id="tip"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <aside class="side">
+      <section class="card">
+        <h2>Find someone</h2>
+        <div class="row"><input id="q" list="names" placeholder="Name or organization" autocomplete="off"><button class="btn small" id="q-go" type="button">Show path</button></div>
+        <datalist id="names"></datalist>
+        <div id="sel"></div>
+      </section>
+      <section class="card">
+        <h2>Bid deciders</h2>
+        <p class="muted">People and agencies on our active bids, closest first.</p>
+        <div class="list" id="deciders"></div>
+      </section>
+      <section class="card">
+        <h2>Import connections</h2>
+        <p class="muted">Use the official downloads, not scraping. <b>LinkedIn:</b> Settings → Data privacy → Get a copy of your data → Connections, which gives you <code>Connections.csv</code>. <b>Facebook:</b> Settings → Your information → Download your information → Friends, as JSON, which gives you <code>your_friends.json</code>.</p>
+        <div class="row" style="margin-top:8px"><span class="muted">Whose list?</span><input id="i-who" list="names" placeholder="Joe Nettles"></div>
+        <div class="row" style="margin-top:8px"><input type="file" id="i-file" accept=".csv,.json,text/csv,application/json"></div>
+        <label class="muted" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="i-match" checked> Only people who match someone or an organization already in the network</label>
+        <div id="i-prev" class="muted" style="margin-top:8px"></div>
+        <div class="row" style="margin-top:8px"><button class="btn" id="i-go" type="button" disabled>Import</button></div>
+      </section>
+      <section class="card">
+        <h2>Add to the network</h2>
+        <div class="row" style="margin-top:4px">
+          <select id="a-kind"><option value="person">Person</option><option value="org">Organization</option></select>
+          <select id="a-group"></select>
+        </div>
+        <div class="row" style="margin-top:8px"><input id="a-name" placeholder="Name"></div>
+        <div class="row" style="margin-top:8px"><input id="a-title" placeholder="Title or what they do"><input id="a-county" placeholder="County"></div>
+        <div class="row" style="margin-top:8px"><select id="a-rel"></select><input id="a-to" list="names" placeholder="Connected to (default: Joe)"></div>
+        <label class="muted" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="a-dec"> Decides or scores bids</label>
+        <div class="row" style="margin-top:10px"><button class="btn" id="a-go" type="button">Add</button><span class="muted" id="a-msg"></span></div>
+      </section>
+    </aside>
+  </div>
+</div>
+<script>
+(() => {
+  const GROUPS = {me: ['Joe', '#73213b'], company: ['Company', '#5c6bc0'], gc: ['GC / builder', '#2f5d9b'], agency: ['Agency / government', '#006b46'],
+    school: ['School / college', '#00897b'], housing: ['Housing authority', '#7cb342'], chamber: ['Chamber / business group', '#f57c00'],
+    association: ['Trade association', '#b06a00'], church: ['Church', '#8e24aa'], nonprofit: ['Nonprofit / club', '#c2185b'], person: ['Person', '#6b6f78'], other: ['Other', '#9aa0a8']};
+  const RELS = ['knows', 'family', 'worked with', 'customer', 'member', 'board', 'officer', 'chair', 'organizer', 'staff', 'works at', 'former staff', 'alumni', 'sponsor', 'volunteer', 'elected', 'consultant', 'decides', 'awarded', 'follows'];
+  const STRONG = {knows: 1, family: 1, 'worked with': 1, customer: 1};   // a direct relationship beats a shared membership
+  const DEG = ['', '#006b46', '#e3a008', '#f57c00', '#b3261e'];
+  const ME = 'n-joe-nettles';
+  const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const slug = (s) => norm(s).replace(/ /g, '-').slice(0, 60) || 'x';
+  const toast = (m) => { const t = el('div', 'toast', m); document.body.append(t); setTimeout(() => t.remove(), 2200); };
+  const today = new Date().toISOString().slice(0, 10);
+  let docs = [], pipe = [], opps = [], G = null, selected = null, pathIds = new Set(), sim = null;
+  const prefs = (() => { try { return JSON.parse(localStorage.getItem('mg-net') || '{}'); } catch (e) { return {}; } })();
+  const savePrefs = () => { try { localStorage.setItem('mg-net', JSON.stringify(prefs)); } catch (e) {} };
+
+  // ---------- data ----------
+  async function load() {
+    const [n, p, o] = await Promise.all([fetch('/api/col/network').then((r) => r.json()), fetch('/api/col/pipeline').then((r) => r.json()), fetch('/api/data/opps').then((r) => r.json())]);
+    docs = n.docs; pipe = p.docs; opps = o;
+  }
+  const api = async (method, url, body) => {
+    const r = await fetch(url, {method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+    if (!r.ok) throw new Error(await r.text()); return r.json();
+  };
+
+  // Stored nodes/edges plus bid deciders taken live from the Pipeline (and, optionally, every open bid's contact).
+  function buildGraph() {
+    const nodes = new Map(), byName = new Map(), edges = [];
+    const add = (n) => { const k = norm(n.name); if (byName.has(k)) { const cur = nodes.get(byName.get(k)); cur.bids = [...new Set([...(cur.bids || []), ...(n.bids || [])])]; cur.decider = cur.decider || n.decider; return cur.id; } nodes.set(n.id, n); byName.set(k, n.id); return n.id; };
+    docs.filter((d) => d.data.type === 'node').forEach((d) => add({...d.data, id: d.id, bids: []}));
+    if (!nodes.has(ME)) add({id: ME, kind: 'person', name: 'Joe Nettles', title: 'Owner, Magnolia Roofing & Remodeling', group: 'me', me: true, bids: []});
+    const oppByKey = new Map(opps.map((r) => [r.key, r]));
+    const bidPeople = (label, agency, person, title, group) => {
+      if (person && person.includes(',')) { const [nm, ...rest] = person.split(','); person = nm.trim(); title = title || rest.join(',').trim(); }   // "Becky Dawes, Procurement Director"
+      const oid = add({id: 'd-org-' + slug(agency), kind: 'org', name: agency, group: group || 'agency', decider: true, derived: true, bids: [label]});
+      if (person) { const pid = add({id: 'd-p-' + slug(person), kind: 'person', name: person, title: title || '', group: 'person', decider: true, derived: true, bids: [label]}); if (!edges.some((e) => e.id === 'd-e-' + pid + oid)) edges.push({id: 'd-e-' + pid + oid, a: pid, b: oid, rel: 'decides', derived: true}); }
+    };
+    pipe.filter((d) => ['watching', 'going', 'submitted'].includes(d.data.stage || 'watching')).forEach((d) => {
+      const c = d.data, o = oppByKey.get(c.source) || {};
+      const fact = ((c.facts || []).find((f) => f.k === 'Contact') || {}).v || '';
+      const person = o.contact_name ? o.contact_name.replace(/\s*\(.*$/, '') : fact.split(/[(,·]/)[0].trim();
+      const title = o.contact_name && /\(([^)]+)\)/.test(o.contact_name) ? o.contact_name.match(/\(([^)]+)\)/)[1] : (fact.match(/,\s*([^·,]+?)\s*·/) || [])[1] || '';
+      bidPeople(c.name, c.agency || o.agency || 'Agency', person, title);
+    });
+    if (prefs.open) opps.filter((r) => r.contact_name && (!r.missed_prebid && !r.gc_lead && (r.status === 'rolling' || (r.due && r.due >= today)))).forEach((r) => bidPeople(r.title, r.agency, r.contact_name.replace(/\s*\(.*$/, ''), (r.contact_name.match(/\(([^)]+)\)/) || [])[1] || ''));
+    const id = (x) => (nodes.has(x) ? x : byName.get(norm(x)));
+    docs.filter((d) => d.data.type === 'edge').forEach((d) => { const a = id(d.data.a), b = id(d.data.b); if (a && b && a !== b) edges.push({...d.data, id: d.id, a, b}); });
+    // distance from Joe: breadth-first, direct relationships explored first
+    const adj = new Map([...nodes.keys()].map((k) => [k, []]));
+    edges.forEach((e) => { adj.get(e.a).push([e.b, e]); adj.get(e.b).push([e.a, e]); });
+    adj.forEach((l) => l.sort((x, y) => (STRONG[y[1].rel] || 0) - (STRONG[x[1].rel] || 0)));
+    const dist = new Map([[ME, 0]]), prev = new Map(), qq = [ME];
+    while (qq.length) { const u = qq.shift(); for (const [v, e] of adj.get(u) || []) if (!dist.has(v)) { dist.set(v, dist.get(u) + 1); prev.set(v, [u, e]); qq.push(v); } }
+    nodes.forEach((n, k) => { n.dist = dist.has(k) ? dist.get(k) : null; n.degree = adj.get(k).length; });
+    G = {nodes, edges, adj, prev, byName, id};
+  }
+  const pathTo = (target) => { const out = []; let cur = target; if (!G.prev.has(cur) && cur !== ME) return null; while (cur !== ME) { const [u, e] = G.prev.get(cur); out.unshift({from: u, to: cur, e}); cur = u; } return out; };
+  const intros = (path) => path ? path.filter((h) => h.to !== path[path.length - 1].to && G.nodes.get(h.to).kind === 'person').length : null;
+
+  // ---------- graph ----------
+  const svg = d3.select('#svg'), root = svg.append('g'), gl = root.append('g'), gn = root.append('g');
+  const zoom = d3.zoom().scaleExtent([0.15, 4]).on('zoom', (ev) => { root.attr('transform', ev.transform); labelVis(ev.transform.k); });
+  svg.call(zoom).on('dblclick.zoom', null);
+  let curK = 1;
+  const labelVis = (k) => { curK = k; gn.selectAll('text').attr('display', (d) => showLabel(d) ? null : 'none'); };
+  const showLabel = (d) => prefs.labels !== false && (d.me || d.decider || d.dist === 1 || pathIds.has(d.id) || d.id === selected || d.degree >= 4 || curK > 1.4);
+  const R = (d) => d.me ? 22 : Math.min(18, 6 + Math.sqrt(d.degree) * 3) + (d.kind === 'org' ? 2 : 0);
+  const color = (d) => (GROUPS[d.me ? 'me' : d.group] || GROUPS.other)[1];
+  const ring = (d) => d.me ? '#fff' : d.dist == null ? '#b8bcc6' : DEG[Math.min(4, d.dist)];
+
+  function draw() {
+    const W = svg.node().clientWidth, H = svg.node().clientHeight;
+    const maxD = +(prefs.depth || 99);
+    const nodes = [...G.nodes.values()].filter((n) => n.me || maxD === 99 || (n.dist != null && n.dist <= maxD));
+    const keep = new Set(nodes.map((n) => n.id));
+    const links = G.edges.filter((e) => keep.has(e.a) && keep.has(e.b)).map((e) => ({...e, source: e.a, target: e.b}));
+    const old = new Map((sim ? sim.nodes() : []).map((n) => [n.id, n]));
+    nodes.forEach((n) => { const o = old.get(n.id); if (o) { n.x = o.x; n.y = o.y; } else if (n.me) { n.x = W / 2; n.y = H / 2; } });
+    const me = nodes.find((n) => n.me); if (me) { me.fx = W / 2; me.fy = H / 2; }
+    if (sim) sim.stop();
+    sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id((d) => d.id).distance((l) => (STRONG[l.rel] ? 70 : 95)).strength(0.5))
+      .force('charge', d3.forceManyBody().strength(-260))
+      .force('collide', d3.forceCollide().radius((d) => R(d) + 6))
+      .force('radial', d3.forceRadial((d) => (d.dist == null ? Math.min(W, H) * 0.46 : d.dist * 120), W / 2, H / 2).strength(0.12));
+    const L = gl.selectAll('line').data(links, (d) => d.id).join('line')
+      .attr('stroke', (d) => (STRONG[d.rel] ? '#9aa0a8' : '#d3d6dd')).attr('stroke-width', (d) => (STRONG[d.rel] ? 1.8 : 1.1))
+      .attr('stroke-dasharray', (d) => (d.derived ? '3 3' : null));
+    const N = gn.selectAll('g.n').data(nodes, (d) => d.id).join((enter) => {
+      const g = enter.append('g').attr('class', 'n').style('cursor', 'pointer');
+      g.append('circle').attr('class', 'ring'); g.append('circle').attr('class', 'dot'); g.append('text');
+      return g;
+    });
+    N.select('circle.ring').attr('r', (d) => R(d) + 3.5).attr('fill', 'none').attr('stroke', ring).attr('stroke-width', 3).attr('stroke-dasharray', (d) => (d.dist == null && !d.me ? '3 3' : null));
+    N.select('circle.dot').attr('r', R).attr('fill', color).attr('stroke', '#fff').attr('stroke-width', 1.5);
+    N.select('text').text((d) => d.name).attr('x', (d) => R(d) + 6).attr('y', 4).attr('font-size', (d) => (d.me ? 14 : d.decider ? 12 : 11)).attr('font-weight', (d) => (d.me || d.decider ? 700 : 500))
+      .attr('fill', '#2b2326').attr('paint-order', 'stroke').attr('stroke', '#fff').attr('stroke-width', 3.5);
+    N.on('click', (ev, d) => { ev.stopPropagation(); select(d.id); })
+      .on('mouseenter', (ev, d) => { const t = document.getElementById('tip'); t.style.display = 'block'; t.innerHTML = ''; t.append(el('b', null, d.name), el('div', null, [d.title, (GROUPS[d.group] || [])[0], d.dist == null ? 'no path from Joe yet' : d.me ? '' : d.dist + ' step' + (d.dist === 1 ? '' : 's') + ' from Joe'].filter(Boolean).join(' · '))); })
+      .on('mousemove', (ev) => { const t = document.getElementById('tip'), b = svg.node().getBoundingClientRect(); t.style.left = (ev.clientX - b.left + 14) + 'px'; t.style.top = (ev.clientY - b.top + 50) + 'px'; })
+      .on('mouseleave', () => { document.getElementById('tip').style.display = 'none'; })
+      .call(d3.drag().on('start', (ev, d) => { if (!ev.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag', (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+        .on('end', (ev, d) => { if (!ev.active) sim.alphaTarget(0); if (!d.me) { d.fx = null; d.fy = null; } }));
+    svg.on('click', () => select(null));
+    let fitted = false;
+    sim.on('end', () => { if (!fitted && !window.__noFit) { fitted = true; fit(); } });
+    sim.on('tick', () => {
+      L.attr('x1', (d) => d.source.x).attr('y1', (d) => d.source.y).attr('x2', (d) => d.target.x).attr('y2', (d) => d.target.y);
+      N.attr('transform', (d) => `translate(${d.x},${d.y})`);
+    });
+    highlight();
+  }
+  function highlight() {
+    const on = pathIds.size > 0;
+    gn.selectAll('g.n').attr('opacity', (d) => (!on || pathIds.has(d.id) ? 1 : 0.25));
+    gl.selectAll('line').attr('opacity', (d) => (!on || (pathIds.has(d.a) && pathIds.has(d.b) && pathEdges.has(d.id)) ? 1 : 0.12))
+      .attr('stroke', (d) => (on && pathEdges.has(d.id) ? '#73213b' : STRONG[d.rel] ? '#9aa0a8' : '#d3d6dd')).attr('stroke-width', (d) => (on && pathEdges.has(d.id) ? 3 : STRONG[d.rel] ? 1.8 : 1.1));
+    gn.selectAll('circle.dot').attr('stroke', (d) => (d.id === selected ? '#2b2326' : '#fff')).attr('stroke-width', (d) => (d.id === selected ? 3 : 1.5));
+    labelVis(curK);
+  }
+  let pathEdges = new Set();
+
+  // ---------- side panel ----------
+  function select(id) {
+    selected = id; pathIds = new Set(); pathEdges = new Set();
+    const box = document.getElementById('sel'); box.replaceChildren();
+    if (!id || !G.nodes.has(id)) { highlight(); return; }
+    const n = G.nodes.get(id), p = n.me ? [] : pathTo(id);
+    if (p) { pathIds = new Set([ME, ...p.map((h) => h.to)]); pathEdges = new Set(p.map((h) => h.e.id)); }
+    else pathIds = new Set([id]);
+    highlight();
+    const c = el('div'); c.style.marginTop = '12px';
+    const h = el('div'); h.append(el('b', null, n.name)); h.style.cssText = 'font-size:16px;color:var(--ink)';
+    c.append(h);
+    if (n.title) c.append(el('div', 'muted', n.title));
+    const chips = el('div'); chips.append(el('span', 'chip', (GROUPS[n.me ? 'me' : n.group] || GROUPS.other)[0])); if (n.county) chips.append(el('span', 'chip', n.county + ' County'));
+    if (n.decider) chips.append(el('span', 'chip dec', 'Decides bids')); (n.bids || []).forEach((b) => chips.append(el('span', 'chip', b)));
+    c.append(chips);
+    // the path
+    if (!n.me) {
+      const ph = el('div', 'path');
+      if (!p) ph.append(el('p', 'empty', 'No path from Joe yet. Add someone Joe knows who knows ' + n.name + ', or a group they both belong to.'));
+      else {
+        const k = intros(p);
+        ph.append(el('div', 'muted', p.length + ' step' + (p.length === 1 ? '' : 's') + ' from Joe' + (k ? ' · ' + k + ' introduction' + (k === 1 ? '' : 's') + ' needed' : p.length === 1 ? ' · direct' : ' · no introductions: shared membership')));
+        const hop = (nid) => { const d = el('div', 'hop'); const b = el('b', null, G.nodes.get(nid).name); b.style.cursor = 'pointer'; b.onclick = () => select(nid); d.append(b); const t = G.nodes.get(nid).title; if (t) d.append(el('span', 'muted', t)); return d; };
+        ph.append(hop(ME)); p.forEach((s) => { ph.append(el('div', 'rel', s.e.rel + (s.e.notes ? ' · ' + s.e.notes : ''))); ph.append(hop(s.to)); });
+      }
+      c.append(ph);
+    }
+    // fields
+    if (n.derived) {
+      const note = el('p', 'muted', 'From the Pipeline. Save it to add notes and connections that last.'); note.style.marginTop = '10px'; c.append(note);
+    }
+    const kv = el('div', 'kv'); const fields = {};
+    [['title', 'Title'], ['county', 'County'], ['url', 'Link']].forEach(([k, lab]) => { const i = el('input'); i.value = n[k] || ''; fields[k] = i; kv.append(el('span', null, lab), i); });
+    const g = el('select'); Object.entries(GROUPS).filter(([k]) => k !== 'me').forEach(([k, [l]]) => g.append(new Option(l, k))); g.value = n.group || (n.kind === 'person' ? 'person' : 'other'); fields.group = g; kv.append(el('span', null, 'Type'), g);
+    const nt = el('textarea'); nt.rows = 2; nt.value = n.notes || ''; nt.placeholder = 'How Joe knows them, last time they talked, what they care about'; fields.notes = nt;
+    c.append(kv, nt);
+    const r1 = el('div', 'row'); r1.style.marginTop = '8px';
+    const dec = el('label', 'muted'); const dcb = el('input'); dcb.type = 'checkbox'; dcb.checked = !!n.decider; dec.append(dcb, document.createTextNode(' Decides bids')); dec.style.cssText = 'display:flex;gap:6px;align-items:center';
+    const save = el('button', 'btn small', n.derived ? 'Save to network' : 'Save'); save.type = 'button';
+    save.onclick = async () => {
+      const data = {type: 'node', kind: n.kind, name: n.name, group: fields.group.value, title: fields.title.value.trim(), county: fields.county.value.trim(), url: fields.url.value.trim(), notes: fields.notes.value.trim(), decider: dcb.checked};
+      if (n.me) data.me = true;
+      try {
+        if (n.derived || !docs.some((d) => d.id === id)) {
+          const nid = n.me ? ME : 'n-' + slug(n.name); await api('PUT', '/api/col/network/' + nid, data);
+          if (n.derived) for (const e of G.edges.filter((e) => e.derived && (e.a === id || e.b === id))) { const other = G.nodes.get(e.a === id ? e.b : e.a); await api('POST', '/api/col/network', {id: 'e-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), data: {type: 'edge', a: nid, b: other.derived ? 'n-' + slug(other.name) : other.id, rel: e.rel}}); if (other.derived) await api('PUT', '/api/col/network/n-' + slug(other.name), {type: 'node', kind: other.kind, name: other.name, group: other.group, title: other.title || '', decider: true}); }
+          await refresh(nid);
+        } else { await api('PATCH', '/api/col/network/' + id, data); await refresh(id); }
+        toast('Saved');
+      } catch (e) { toast('Couldn’t save. Is server.py running?'); }
+    };
+    r1.append(dec, el('span', 'sp'), save);
+    if (!n.me && !n.derived) { const del = el('button', 'btn danger small', 'Delete'); del.type = 'button'; del.onclick = async () => { if (!del.dataset.sure) { del.dataset.sure = 1; del.textContent = 'Click again to delete'; return; } await api('DELETE', '/api/col/network/' + id); for (const d of docs.filter((d) => d.data.type === 'edge' && (d.data.a === id || d.data.b === id))) await api('DELETE', '/api/col/network/' + d.id); await refresh(null); }; r1.append(del); }
+    r1.querySelector('.sp') && (r1.querySelector('.sp').style.flex = '1');
+    c.append(r1);
+    // connections
+    const ch = el('div'); ch.style.marginTop = '14px'; ch.append(el('b', null, 'Connections (' + G.adj.get(id).length + ')'));
+    G.adj.get(id).forEach(([oid, e]) => {
+      const row = el('div', 'conn'); const a = el('a', null, G.nodes.get(oid).name); a.onclick = () => select(oid);
+      const left = el('span'); left.append(a, el('span', 'muted', '  ' + e.rel)); row.append(left);
+      if (!e.derived) { const x = el('button', null, '×'); x.title = 'Remove this connection'; x.onclick = async () => { await api('DELETE', '/api/col/network/' + e.id); await refresh(id); }; row.append(x); }
+      ch.append(row);
+    });
+    if (!n.derived) {
+      const r2 = el('div', 'row'); r2.style.marginTop = '8px';
+      const to = el('input'); to.setAttribute('list', 'names'); to.placeholder = 'Connect to…';
+      const rel = el('select'); RELS.forEach((r) => rel.append(new Option(r, r)));
+      const go = el('button', 'btn small', 'Link'); go.type = 'button';
+      go.onclick = async () => { const oid = await ensure(to.value.trim()); if (!oid) return toast('Type a name first'); await api('POST', '/api/col/network', {id: 'e-' + Date.now().toString(36), data: {type: 'edge', a: id, b: oid, rel: rel.value}}); await refresh(id); };
+      r2.append(to, rel, go); ch.append(r2);
+    }
+    c.append(ch);
+    box.append(c);
+  }
+  // returns a stored node id for a name, saving pipeline-derived nodes and creating new people as needed
+  async function ensure(name) {
+    if (!name) return null;
+    const id = G.id(name);
+    if (id && !G.nodes.get(id).derived) return id;
+    const n = id ? G.nodes.get(id) : {kind: 'person', name, group: 'person'};
+    const nid = 'n-' + slug(n.name);
+    await api('PUT', '/api/col/network/' + nid, {type: 'node', kind: n.kind, name: n.name, group: n.group, title: n.title || '', decider: !!n.decider});
+    return nid;
+  }
+  function deciders() {
+    const box = document.getElementById('deciders'); box.replaceChildren();
+    const list = [...G.nodes.values()].filter((n) => n.decider && n.kind === 'person').sort((a, b) => (a.dist ?? 99) - (b.dist ?? 99) || a.name.localeCompare(b.name));
+    const orgs = [...G.nodes.values()].filter((n) => n.decider && n.kind === 'org' && !list.some((p) => G.adj.get(p.id).some(([o]) => o === n.id))).sort((a, b) => (a.dist ?? 99) - (b.dist ?? 99));
+    [...list, ...orgs].forEach((n) => {
+      const r = el('div', 'dec' + (n.id === selected ? ' on' : '')); const d = el('div', 'deg' + (n.dist ? ' d' + Math.min(4, n.dist) : ''), n.dist == null ? '–' : String(n.dist));
+      const t = el('div'); t.append(el('b', null, n.name)); const org = G.adj.get(n.id).map(([o]) => G.nodes.get(o)).find((o) => o.kind === 'org');
+      t.append(el('div', 'muted', [n.title, org && org.name, n.dist == null ? 'no path yet' : n.dist + ' step' + (n.dist === 1 ? '' : 's')].filter(Boolean).join(' · ')));
+      r.append(d, t); r.onclick = () => { select(n.id); deciders(); }; box.append(r);
+    });
+    if (!box.children.length) box.append(el('p', 'empty', 'No bid contacts yet. Cards on the Pipeline add theirs here.'));
+  }
+  function names() { const dl = document.getElementById('names'); dl.replaceChildren(...[...G.nodes.values()].sort((a, b) => a.name.localeCompare(b.name)).map((n) => new Option(n.title ? n.name + ' · ' + n.title : n.name, n.name))); }
+  function legend() {
+    const lg = document.getElementById('legend'); lg.replaceChildren();
+    const used = new Set([...G.nodes.values()].map((n) => (n.me ? 'me' : n.group)));
+    Object.entries(GROUPS).filter(([k]) => used.has(k)).forEach(([, [l, c]]) => { const s = el('span'); const i = el('i'); i.style.background = c; s.append(i, document.createTextNode(l)); lg.append(s); });
+    [['1 step', DEG[1]], ['2', DEG[2]], ['3', DEG[3]], ['4+', DEG[4]], ['no path', '#b8bcc6']].forEach(([l, c]) => { const s = el('span'); const i = el('i', 'ring'); i.style.borderColor = c; s.append(i, document.createTextNode(l)); lg.append(s); });
+  }
+  async function refresh(sel) { await load(); buildGraph(); draw(); names(); legend(); select(sel === undefined ? selected : sel); deciders(); }
+
+  // ---------- controls ----------
+  const grp = document.getElementById('a-group'); Object.entries(GROUPS).filter(([k]) => k !== 'me').forEach(([k, [l]]) => grp.append(new Option(l, k)));
+  const kind = document.getElementById('a-kind'); const syncKind = () => { grp.value = kind.value === 'person' ? 'person' : 'company'; }; kind.onchange = syncKind; syncKind();
+  const relSel = document.getElementById('a-rel'); RELS.forEach((r) => relSel.append(new Option(r, r)));
+  document.getElementById('a-go').onclick = async () => {
+    const name = document.getElementById('a-name').value.trim(), msg = document.getElementById('a-msg');
+    if (!name) { msg.textContent = 'Name is required'; return; }
+    if (G.id(name) && !G.nodes.get(G.id(name)).derived) { msg.textContent = name + ' is already in the network'; select(G.id(name)); return; }
+    try {
+      const nid = 'n-' + slug(name);
+      await api('PUT', '/api/col/network/' + nid, {type: 'node', kind: kind.value, name, group: grp.value, title: document.getElementById('a-title').value.trim(), county: document.getElementById('a-county').value.trim(), decider: document.getElementById('a-dec').checked, added: today});
+      const toName = document.getElementById('a-to').value.trim();
+      const to = toName ? await ensure(toName) : ME;
+      if (to === ME && !docs.some((d) => d.id === ME)) await api('PUT', '/api/col/network/' + ME, {type: 'node', kind: 'person', name: 'Joe Nettles', title: 'Owner, Magnolia Roofing & Remodeling', group: 'me', me: true});
+      await api('POST', '/api/col/network', {id: 'e-' + Date.now().toString(36), data: {type: 'edge', a: to, b: nid, rel: relSel.value}});
+      ['a-name', 'a-title', 'a-county', 'a-to'].forEach((k) => { document.getElementById(k).value = ''; }); document.getElementById('a-dec').checked = false;
+      msg.textContent = ''; await refresh(nid); toast('Added ' + name);
+    } catch (e) { msg.textContent = 'Couldn’t save. Is server.py running?'; }
+  };
+
+  // ---------- import: LinkedIn Connections.csv or Facebook your_friends.json ----------
+  const csvRows = (text) => { const rows = []; let row = [], cur = '', q = false; for (let i = 0; i < text.length; i++) { const c = text[i]; if (q) { if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; } else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; } else cur += c; } if (cur || row.length) { row.push(cur); rows.push(row); } return rows; };
+  const fixFb = (s) => { try { return decodeURIComponent(escape(s)); } catch (e) { return s; } };   // Facebook exports UTF-8 as Latin-1 escapes
+  function parseImport(name, text) {
+    if (/\.json$/i.test(name) || /^\s*[{[]/.test(text)) {
+      const j = JSON.parse(text); const list = j.friends_v2 || j.friends || (Array.isArray(j) ? j : []);
+      return {source: 'Facebook', people: list.filter((f) => f && f.name).map((f) => ({name: fixFb(f.name)}))};
+    }
+    const rows = csvRows(text), h = rows.findIndex((r) => r.some((c) => /^first name$/i.test(c.trim())));
+    if (h < 0) throw new Error('No "First Name" column. Is this LinkedIn’s Connections.csv?');
+    const head = rows[h].map((c) => c.trim().toLowerCase()), col = (k) => head.indexOf(k);
+    return {source: 'LinkedIn', people: rows.slice(h + 1).filter((r) => r.length > 1).map((r) => ({name: [r[col('first name')], r[col('last name')]].filter(Boolean).join(' ').trim(), company: (r[col('company')] || '').trim(), title: (r[col('position')] || '').trim(), url: (r[col('url')] || '').trim(), since: (r[col('connected on')] || '').trim()})).filter((p) => p.name)};
+  }
+  let pending = null;
+  const orgMatch = (company) => { if (!company) return null; const c = norm(company); if (c.length < 4) return null; for (const n of G.nodes.values()) if (n.kind === 'org' && !n.derived) { const o = norm(n.name); if (o === c || (o.length > 6 && (o.startsWith(c + ' ') || c.startsWith(o + ' ')))) return n.id; } return null; };
+  document.getElementById('i-file').onchange = async (ev) => {
+    const f = ev.target.files[0], prev = document.getElementById('i-prev'), btn = document.getElementById('i-go'); pending = null; btn.disabled = true; if (!f) return;
+    try {
+      const {source, people} = parseImport(f.name, await f.text());
+      const rows = people.map((p) => ({...p, personId: G.byName.get(norm(p.name)) || null, orgId: orgMatch(p.company)}));
+      pending = {source, rows};
+      const hitP = rows.filter((r) => r.personId), hitO = rows.filter((r) => r.orgId && !r.personId);
+      prev.replaceChildren(el('div', null, source + ': ' + rows.length + ' people. ' + hitP.length + ' are already in the network; ' + hitO.length + ' more work at an organization in the network.'));
+      [...hitP, ...hitO].slice(0, 12).forEach((r) => prev.append(el('div', null, '• ' + r.name + (r.company ? ' (' + r.company + ')' : '') + (r.personId ? ' — match' : ' — works at ' + G.nodes.get(r.orgId).name))));
+      btn.disabled = false;
+    } catch (e) { prev.textContent = 'Couldn’t read that file: ' + e.message; }
+  };
+  document.getElementById('i-go').onclick = async () => {
+    if (!pending) return;
+    const btn = document.getElementById('i-go'), prev = document.getElementById('i-prev');
+    const whoName = document.getElementById('i-who').value.trim() || 'Joe Nettles';
+    const who = whoName === 'Joe Nettles' ? ME : G.id(whoName); if (!who) { toast('Pick whose list this is (add them first)'); return; }
+    const only = document.getElementById('i-match').checked, out = {}, stamp = Date.now().toString(36);
+    const rows = pending.rows.filter((r) => !only || r.personId || r.orgId);
+    let i = 0;
+    for (const r of rows) {
+      let pid = r.personId;
+      if (pid && G.nodes.get(pid).derived) pid = null;
+      if (!pid) { pid = 'n-' + slug(r.name); if (!docs.some((d) => d.id === pid)) out[pid] = {type: 'node', kind: 'person', name: r.name, group: 'person', title: [r.title, r.company].filter(Boolean).join(', '), url: r.url || '', source: pending.source + ' import', added: today}; }
+      if (pid === who) continue;
+      out['e-imp-' + stamp + '-' + (i++)] = {type: 'edge', a: who, b: pid, rel: 'knows', notes: pending.source + ' connection' + (r.since ? ' since ' + r.since : ''), source: pending.source + ' import'};
+      if (r.orgId && !G.adj.get(r.personId || '')?.some(([o]) => o === r.orgId)) out['e-imp-' + stamp + '-' + (i++)] = {type: 'edge', a: pid, b: r.orgId, rel: 'works at', notes: r.title || '', source: pending.source + ' import'};
+    }
+    btn.disabled = true; btn.textContent = 'Importing…';
+    try { await api('PUT', '/api/col/network', {docs: out}); prev.textContent = 'Imported ' + rows.length + ' people from ' + pending.source + '.'; pending = null; document.getElementById('i-file').value = ''; await refresh(who); }
+    catch (e) { prev.textContent = 'Import failed. Is server.py running?'; btn.disabled = false; }
+    finally { btn.textContent = 'Import'; }
+  };
+  const go = () => { const id = G.id(document.getElementById('q').value.trim()); if (id) { select(id); deciders(); } else toast('Not in the network yet'); };
+  document.getElementById('q-go').onclick = go; document.getElementById('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  const tOpen = document.getElementById('t-open'), tLab = document.getElementById('t-labels'), tDep = document.getElementById('t-depth');
+  tOpen.checked = !!prefs.open; tLab.checked = prefs.labels !== false; tDep.value = prefs.depth || '99';
+  tOpen.onchange = () => { prefs.open = tOpen.checked; savePrefs(); refresh(); };
+  tLab.onchange = () => { prefs.labels = tLab.checked; savePrefs(); labelVis(curK); };
+  tDep.onchange = () => { prefs.depth = tDep.value; savePrefs(); draw(); };
+  // zoom so every node fits in the frame
+  function fit() {
+    const ns = sim ? sim.nodes() : []; if (!ns.length) return;
+    const W = svg.node().clientWidth, H = svg.node().clientHeight, pad = 60;
+    const x0 = d3.min(ns, (d) => d.x) - pad, x1 = d3.max(ns, (d) => d.x) + pad + 120, y0 = d3.min(ns, (d) => d.y) - pad, y1 = d3.max(ns, (d) => d.y) + pad;
+    const k = Math.min(1.6, W / (x1 - x0), H / (y1 - y0));
+    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(W / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2).scale(k));
+  }
+  document.getElementById('t-fit').onclick = fit;
+  window.addEventListener('resize', () => draw());
+  refresh(null).then(() => { const h = decodeURIComponent(location.hash.slice(1)); if (h && G.id(h)) select(G.id(h)); }).catch(() => { document.querySelector('.wrap').append(el('p', 'empty', 'Can’t reach the local server. Is python3 server.py still running?')); });
+})();
+</script>
+</body>
+</html>

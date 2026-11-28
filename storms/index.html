@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<script src="/_app/gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Storm History · Magnolia Admin</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/shell.css">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="/vendor/leaflet/leaflet-heat.js"></script>
+<script src="/js/topbar.js" defer></script>
+<script src="/js/d3.v7.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --mist: #f3f4f7; --paper: #fff; --line: #e1e4ea; --line2: #eceef2;
+  --ink: #2b2326; --body: #4a4347; --slate: #6b6f78;
+  --mag: #73213b; --mag-soft: #f6eef1; --leaf: #006b46; --leaf-soft: #e8f3ee;
+  --amber: #8a5a00; --amber-soft: #fbf3e2; --red: #b3261e; --red-soft: #fbeceb;
+  --serif: 'MG PT Serif', 'PT Serif', Georgia, serif;
+  --sans: 'MG Manrope', Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+body { background: var(--mist); color: var(--body); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+.wrap { padding: clamp(16px, 3.5vw, 40px); padding-bottom: 64px; display: grid; gap: 20px; max-width: 1400px; margin: 0 auto; }
+h1, h2, h3 { color: var(--ink); margin: 0; text-wrap: balance; }
+h1 { font-family: var(--serif); font-size: clamp(24px, 3vw, 32px); line-height: 1.2; }
+h2 { font-family: var(--serif); font-size: 20px; }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--slate); }
+p { margin: 0; }
+a { color: var(--mag); }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(43,35,38,.06), 0 4px 14px rgba(43,35,38,.06); min-width: 0; }
+.lede { max-width: 820px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls select, .controls button { font: 600 14px var(--sans); height: 38px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 0 10px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--paper); }
+.seg button { border: 0; border-radius: 0; height: 36px; padding: 0 12px; cursor: pointer; background: none; font: 600 14px var(--sans); color: var(--body); }
+.seg button[aria-pressed="true"] { background: var(--mag); color: #fff; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+.mapcard { padding: 10px; position: relative; }
+#map { width: 100%; height: min(72vh, 720px); min-height: 420px; border-radius: 10px; z-index: 0; background: #e9ecef; }
+.leaflet-container { font-family: var(--sans); }
+.leaflet-popup-content { font-size: 13px; line-height: 1.45; margin: 10px 12px; }
+.leaflet-popup-content b { color: var(--ink); }
+.maptools { position: absolute; top: 20px; right: 20px; z-index: 500; display: flex; gap: 6px; }
+.maptools button { font: 700 13px var(--sans); height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+.maptools button:hover { border-color: var(--mag); color: var(--mag); }
+.cty-lbl { background: none; border: 0; box-shadow: none; font: 700 11px var(--sans); color: #6b2a3f; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+.cty-lbl::before { display: none; }
+.leaflet-heatmap-layer { pointer-events: none; }
+.controls .lbl { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--slate); margin-left: 4px; }
+.controls .chk { display: inline-flex; align-items: center; gap: 6px; font: 600 14px var(--sans); color: var(--ink); height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); cursor: pointer; }
+.controls .chk input { accent-color: var(--mag); width: 16px; height: 16px; margin: 0; }
+.hit { border-top: 1px solid var(--line2); padding: 7px 0; font-size: 13.5px; cursor: pointer; }
+.hit:first-of-type { border-top: 0; }
+.hit:hover .hn { color: var(--mag); text-decoration: underline; }
+.hit .hn { font-weight: 700; color: var(--ink); }
+.hit .hs { font-size: 12.5px; color: var(--slate); }
+.hit .kind { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; margin-right: 6px; }
+.hit .k-sub { background: #efe6f7; color: #5b2a86; } .hit .k-sch { background: #e3eefb; color: #1f4f8f; } .hit .k-big { background: #fdeee0; color: #9a4a00; }
+.hitgrp { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--slate); margin: 10px 0 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 12.5px; color: var(--slate); padding: 6px 8px 2px; }
+.legend .sw { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; border: 1px solid rgba(0,0,0,.3); }
+.legend .ramp { display: inline-block; width: 120px; height: 10px; border-radius: 3px; vertical-align: -1px; margin: 0 6px; }
+.tip { position: absolute; pointer-events: none; background: #2b2326; color: #fff; font-size: 12.5px; line-height: 1.4; padding: 8px 10px; border-radius: 8px; max-width: 300px; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 5; }
+.tip b { color: #fff; }
+.side { display: grid; gap: 16px; }
+.big { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.big div { background: var(--mist); border-radius: 10px; padding: 10px 12px; }
+.big .n { font: 800 22px/1.1 var(--sans); color: var(--ink); }
+.big .l { font-size: 12px; color: var(--slate); }
+.last { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--mag-soft); }
+.last b { color: var(--ink); }
+.last .when { font: 800 18px var(--sans); color: var(--mag); }
+.ev { border-top: 1px solid var(--line2); padding: 8px 0; font-size: 13.5px; }
+.ev:first-of-type { border-top: 0; }
+.ev .d { font-weight: 700; color: var(--ink); }
+.ev .s { font-size: 12.5px; color: var(--slate); }
+.bars { margin-top: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-size: 12px; color: var(--slate); font-weight: 700; padding: 6px 8px; border-bottom: 1px solid var(--line); cursor: pointer; white-space: nowrap; user-select: none; }
+th[aria-sort] { color: var(--mag); }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line2); }
+tr.rowsel td { background: var(--mag-soft); }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: #faf6f7; }
+.fresh { color: var(--red); font-weight: 700; }
+.src { font-size: 12.5px; color: var(--slate); }
+.muted { color: var(--slate); font-size: 13px; }
+.scroll { max-height: 420px; overflow: auto; }
+</style>
+</head>
+<body>
+<header class="topbar" data-page="storms"></header>
+<div class="wrap">
+  <div class="lede">
+    <h1>Storm history</h1>
+    <p>Every hail, damaging-wind and tornado report NOAA has logged in South Carolina since 1955, through yesterday. Hail of 1 inch (quarter size) or bigger is what usually damages shingles. A county that took big hail a few months ago is full of roofs waiting on insurance claims. Click a county for its history.</p>
+  </div>
+
+  <div class="controls" role="group" aria-label="Map filters">
+    <div class="seg" id="type"><button data-v="h" aria-pressed="true">Hail</button><button data-v="w" aria-pressed="false">Wind</button><button data-v="t" aria-pressed="false">Tornado</button></div>
+    <select id="yrs" aria-label="Time range">
+      <option value="1">Last 12 months</option><option value="2">Last 2 years</option><option value="5" selected>Last 5 years</option><option value="10">Last 10 years</option><option value="20">Last 20 years</option><option value="99">All years (1955+)</option>
+    </select>
+    <select id="size" aria-label="Minimum size"></select>
+    <div class="seg" id="view"><button data-v="heat" aria-pressed="true">Heatmap</button><button data-v="dots" aria-pressed="false">Dots</button><button data-v="both" aria-pressed="false">Both</button></div>
+    <select id="county" aria-label="County"><option value="">All of South Carolina</option></select>
+  </div>
+  <div class="controls" role="group" aria-label="Neighborhood filters and layers">
+    <span class="lbl">Neighborhoods</span>
+    <select id="hv" aria-label="Median home value"><option value="0">Any home value</option><option value="200000">Homes $200K+</option><option value="300000">Homes $300K+</option><option value="400000">Homes $400K+</option><option value="500000">Homes $500K+</option><option value="750000">Homes $750K+</option></select>
+    <select id="yb" aria-label="Median year built"><option value="0">Any roof age</option><option value="2010">Built before 2010</option><option value="2000">Built before 2000 (25+ yr roofs)</option><option value="1990">Built before 1990</option><option value="1980">Built before 1980</option></select>
+    <label class="chk"><input type="checkbox" id="shade"> Shade home values</label>
+    <span class="lbl">Show</span>
+    <label class="chk"><input type="checkbox" id="lsubs"> Subdivisions</label>
+    <label class="chk"><input type="checkbox" id="lschools"> Schools</label>
+    <label class="chk"><input type="checkbox" id="lbig"> Large buildings</label>
+    <select id="rad" aria-label="Likely hit radius"><option value="0.5">Hit = within ½ mile</option><option value="1">Hit = within 1 mile</option><option value="2">Hit = within 2 miles</option></select>
+  </div>
+
+  <div class="layout">
+    <div class="card mapcard">
+      <div id="map" role="region" aria-label="Map of storm reports. Scroll or pinch to zoom, drag to move."></div>
+      <div class="maptools"><button type="button" id="near">📍 Near me</button><button type="button" id="fit">Fit county</button><button type="button" id="state">All SC</button></div>
+      <div class="legend" id="legend"></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="side">
+      <section class="card" id="summary"></section>
+      <section class="card"><h3 id="hit-h">Likely hit</h3><p class="muted" id="hit-sub" style="margin:4px 0 8px"></p><div id="hits" class="scroll" style="max-height:380px"></div></section>
+      <section class="card"><h3 id="recent-h">Most recent reports</h3><div id="recent" class="scroll"></div></section>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Counties by most recent damaging storm</h2>
+    <p class="muted" id="tbl-sub" style="margin:4px 0 10px">Click a column to sort and a row to see that county.</p>
+    <div class="scroll" style="max-height:560px"><table id="tbl"></table></div>
+  </section>
+  <p class="src" id="sources"></p>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
+  const TODAY = new Date(); const todayISO = TODAY.toISOString().slice(0, 10);
+  const daysAgo = (d) => Math.round((Date.parse(todayISO + 'T12:00:00') - Date.parse(d + 'T12:00:00')) / 864e5);
+  const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const ago = (d) => { const n = daysAgo(d); return n < 1 ? 'today' : n < 60 ? n + ' days ago' : n < 730 ? Math.round(n / 30.4) + ' months ago' : (n / 365.25).toFixed(1).replace(/\.0$/, '') + ' years ago'; };
+  const HAIL = [[0, 'Any size'], [1, '1"+ (quarter, roof damage)'], [1.75, '1.75"+ (golf ball)'], [2.75, '2.75"+ (baseball)']];
+  const WIND = [[0, 'Any speed'], [58, '58+ mph (severe)'], [70, '70+ mph'], [80, '80+ mph']];
+  const TORN = [[-1, 'Any rating'], [1, 'EF1+'], [2, 'EF2+']];
+  const HAILNAME = (s) => s >= 4 ? 'softball' : s >= 2.75 ? 'baseball' : s >= 2.5 ? 'tennis ball' : s >= 2 ? 'hen egg' : s >= 1.75 ? 'golf ball' : s >= 1.5 ? 'ping pong' : s >= 1.25 ? 'half dollar' : s >= 1 ? 'quarter' : s >= .88 ? 'nickel' : s >= .75 ? 'penny' : 'pea';
+  const magTxt = (t, m) => t === 'h' ? m + '" hail (' + HAILNAME(m) + ')' : t === 'w' ? (m ? m + ' mph wind' : 'damaging wind') : (m >= 0 ? 'EF' + m + ' tornado' : 'tornado');
+  const st = { type: 'h', yrs: 5, size: 1, view: 'heat', county: '', hv: 0, yb: 0, shade: false, lsubs: false, lschools: false, lbig: false, rad: 1 };
+  try { Object.assign(st, JSON.parse(localStorage.getItem('mg-storms') || '{}')); } catch (e) {}
+  const qs = new URLSearchParams(location.search); if (qs.get('county')) st.county = qs.get('county');
+  const save = () => { try { localStorage.setItem('mg-storms', JSON.stringify(st)); } catch (e) {} const u = new URL(location.href); if (st.county) u.searchParams.set('county', st.county); else u.searchParams.delete('county'); history.replaceState(null, '', u); };
+
+  let R = [], shapes = null, meta = {}, map, countyLayer, heat, dots, labels, lastFitCounty = null;
+  let TR = null, TRgeo = null, trLayer = null, SUBS = null, SCH = null, subLayer = null, schLayer = null, bigLayer = null, BIG = [], bigKey = '';
+
+  function sizeOpts() {
+    const O = st.type === 'h' ? HAIL : st.type === 'w' ? WIND : TORN;
+    if (!O.some(([v]) => v === +st.size)) st.size = st.type === 'h' ? 1 : st.type === 'w' ? 58 : -1;
+    const s = $('size'); s.replaceChildren(...O.map(([v, t]) => new Option(t, v, false, v === +st.size)));
+  }
+  function filtered(all) {
+    const from = st.yrs >= 99 ? '0000' : new Date(TODAY.getTime() - st.yrs * 365.25 * 864e5).toISOString().slice(0, 10);
+    const nb = (st.hv || st.yb) && TR;
+    return R.filter((r) => r[1] === st.type && r[0] >= from && (st.type === 't' ? r[2] >= +st.size : r[2] >= +st.size) && (all || !st.county || r[6] === st.county) && (!nb || tractOK(r[9])));
+  }
+  const dotR = (r) => st.type === 'h' ? Math.max(2, Math.min(8, r[2] * 2.6)) : st.type === 't' ? 3 + Math.max(0, r[2]) : 2.4;
+  const dotC = (r) => st.type === 'h' ? (r[2] >= 2 ? '#7a0019' : r[2] >= 1.75 ? '#c2185b' : r[2] >= 1 ? '#f57c00' : '#ffca28') : st.type === 'w' ? (r[2] >= 75 ? '#4a148c' : '#1e88e5') : '#2e7d32';
+
+  const popupHTML = (r) => { const e = (t) => String(t).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c])); return '<b>' + e(fmt(r[0]) + ' · ' + magTxt(r[1], r[2])) + '</b><br>' + e((r[6] ? r[6] + ' County' : r[5]) + (r[7] ? ' · $' + d3.format(',')(r[7]) + ' damage' : '')) + (r[8] ? '<br>' + e(r[8]) : '') + '<br><span style="color:#6b6f78">' + r[3].toFixed(3) + ', ' + r[4].toFixed(3) + ' · <a href="https://www.google.com/maps/search/?api=1&query=' + r[3] + ',' + r[4] + '" target="_blank" rel="noopener">Google Maps</a></span>'; };
+  // more reports pile up per pixel when zoomed out, so raise the ceiling there (keeps statewide view readable, street view sensitive)
+  const heatMax = () => (st.type === 'h' ? 2.6 : 2) * Math.pow(2, Math.max(0, 9.5 - map.getZoom()) * 0.95);
+  const heatRadius = () => { const z = map.getZoom(); return Math.round(Math.max(14, Math.min(42, 10 + (z - 7) * 4.5))); };
+  function initMap() {
+    map = L.map('map', { preferCanvas: true, zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 90, maxZoom: 19, minZoom: 6 }).setView([33.75, -80.9], 7);
+    const E = 'https://server.arcgisonline.com/ArcGIS/rest/services/', att = 'Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors · Storm reports: NOAA';
+    const ref = () => L.tileLayer(E + 'Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19, pane: 'shadowPane' });
+    const bases = {
+      'Light': L.layerGroup([L.tileLayer(E + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19, attribution: att }), ref()]),
+      'Streets': L.tileLayer(E + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: att }),
+      'Satellite (see the roofs)': L.layerGroup([L.tileLayer(E + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics · Storm reports: NOAA' }), L.tileLayer(E + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, pane: 'shadowPane' })]),
+    };
+    let baseName = 'Light'; try { baseName = localStorage.getItem('mg-storm-base') || 'Light'; } catch (e) {}
+    (bases[baseName] || bases.Light).addTo(map);
+    L.control.layers(bases, null, { position: 'bottomleft', collapsed: true }).addTo(map);
+    map.on('baselayerchange', (e) => { try { localStorage.setItem('mg-storm-base', e.name); } catch (x) {} });
+    const counties = shapes.features.filter((f) => f.properties.kind === 'county');
+    countyLayer = L.geoJSON(counties, { style: countyStyle, onEachFeature: (f, l) => { l.on('click', (e) => { if (st.county === f.properties.name) return; st.county = f.properties.name; $('county').value = st.county; save(); render(); }); l.bindTooltip(f.properties.name + ' County', { sticky: true, direction: 'top', opacity: .9 }); } }).addTo(map);
+    labels = L.layerGroup(counties.map((f) => L.marker(L.geoJSON(f).getBounds().getCenter(), { interactive: false, icon: L.divIcon({ className: 'cty-lbl', html: f.properties.name, iconSize: [90, 14], iconAnchor: [45, 7] }) })));
+    map.on('zoomend', () => { if (heat) heat.setOptions({ radius: heatRadius(), blur: Math.round(heatRadius() * .8), maxZoom: map.getZoom(), max: heatMax() });  });
+    map.on('moveend', () => { inViewList(); drawOverlays(); hitList(); });
+    $('near').addEventListener('click', () => { map.locate({ setView: true, maxZoom: 13 }); });
+    map.on('locationerror', () => { $('near').textContent = 'Location blocked'; });
+    $('fit').addEventListener('click', () => fitCounty(true));
+    $('state').addEventListener('click', () => { st.county = ''; $('county').value = ''; save(); render(); });
+  }
+  function countyStyle(f) { const sel = f.properties.name === st.county; return { color: sel ? '#73213b' : '#7d8290', weight: sel ? 3 : .8, opacity: sel ? 1 : .6, fillColor: '#73213b', fillOpacity: sel ? .04 : 0 }; }
+  function fitCounty(force) {
+    if (!st.county) { if (force || lastFitCounty) map.fitBounds(L.geoJSON(shapes.features.filter((f) => f.properties.kind === 'county')).getBounds(), { padding: [10, 10] }); lastFitCounty = null; return; }
+    if (!force && lastFitCounty === st.county) return;
+    const f = shapes.features.find((x) => x.properties.kind === 'county' && x.properties.name === st.county);
+    if (f) map.fitBounds(L.geoJSON(f).getBounds(), { padding: [24, 24] });
+    lastFitCounty = st.county;
+  }
+  function drawMap() {
+    if (!map) initMap();
+    countyLayer.setStyle(countyStyle);
+    if (heat) { map.removeLayer(heat); heat = null; }
+    if (dots) { map.removeLayer(dots); dots = null; }
+    const rows = filtered(true);
+    if (st.view !== 'dots') {
+      const w = (r) => st.type === 'h' ? Math.max(.6, r[2]) : st.type === 't' ? 1.5 + Math.max(0, r[2]) : 1;
+      heat = L.heatLayer(rows.map((r) => [r[3], r[4], w(r)]), { radius: heatRadius(), blur: Math.round(heatRadius() * .8), maxZoom: map.getZoom(), max: heatMax(), minOpacity: .2,
+        gradient: { 0.2: '#ffe082', 0.4: '#ffb300', 0.6: '#f4511e', 0.8: '#c2185b', 1: '#6a0030' } });
+      heat.addTo(map);
+      if (st.view === 'both') heat.setOptions({ minOpacity: .15 });
+    }
+    if (st.view !== 'heat') {
+      dots = L.layerGroup(rows.slice().sort((a, b) => a[2] - b[2]).map((r) => L.circleMarker([r[3], r[4]], { radius: dotR(r) + 1, color: 'rgba(0,0,0,.45)', weight: .8, fillColor: dotC(r), fillOpacity: .85 }).bindPopup(() => popupHTML(r), { maxWidth: 320 })));
+      dots.addTo(map);
+    }
+    fitCounty(false);
+    const L2 = $('legend'); L2.replaceChildren();
+    const n = el('span', null, d3.format(',')(rows.length) + ' reports'); n.id = 'nview'; n.style.fontWeight = '700'; n.style.color = 'var(--ink)'; L2.append(n);
+    if (st.view !== 'dots') { const s = el('span'); const ramp = el('span', 'ramp'); ramp.style.background = 'linear-gradient(90deg,#ffe082,#ffb300,#f4511e,#c2185b,#6a0030)'; s.append('fewer', ramp, 'more' + (st.type === 'h' ? ' / bigger hail' : '')); L2.append(s); }
+    if (st.view !== 'heat') {
+      const items = st.type === 'h' ? [['#ffca28', 'under 1"'], ['#f57c00', '1"+'], ['#c2185b', '1.75"+'], ['#7a0019', '2"+']] : st.type === 'w' ? [['#1e88e5', 'severe wind'], ['#4a148c', '75+ mph']] : [['#2e7d32', 'tornado (bigger = stronger)']];
+      items.forEach(([c, t]) => { const s = el('span'); const sw = el('span', 'sw'); sw.style.background = c; s.append(sw, t); L2.append(s); });
+      L2.append(el('span', null, 'Tap a dot for details.'));
+    }
+    if (st.shade) { const s2 = el('span'); s2.append('Median home value: '); [[0, '<$150K'], [150e3, '$150K'], [225e3, '$225K'], [300e3, '$300K'], [400e3, '$400K'], [550e3, '$550K+']].forEach(([v, t]) => { const w = el('span', 'sw'); w.style.background = hvColor(v + 1); w.style.borderRadius = '2px'; s2.append(w, t + ' '); }); L2.append(s2); }
+    if (st.hv || st.yb) L2.append(el('span', null, 'Only storms in neighborhoods with ' + [st.hv ? 'homes ' + money(st.hv) + '+' : '', st.yb ? 'built before ' + st.yb : ''].filter(Boolean).join(' and ') + ' (outlined).'));
+    L2.append(el('span', null, 'Scroll or pinch to zoom to street level.'));
+    inViewList();
+  }
+  // When zoomed in past county level, the "most recent" list follows what's on the map.
+  function inViewList() {
+    if (!map || !R.length) return;
+    const z = map.getZoom(), b = map.getBounds();
+    const rows = filtered(true).filter((r) => b.contains([r[3], r[4]]));
+    const nv = $('nview'); if (nv) nv.textContent = d3.format(',')(rows.length) + ' reports in view';
+    if (z < 11) { summaryList(); return; }
+    const list = $('recent'); list.replaceChildren();
+    $('recent-h').textContent = 'Reports in the map view (' + rows.length + ')';
+    if (!rows.length) list.append(el('p', 'muted', 'No reports in this view for the filters above. Try a longer time range or smaller size.'));
+    rows.slice(-60).reverse().forEach((r) => list.append(evRow(r)));
+  }
+  function evRow(r) {
+    const d = el('div', 'ev'); const fresh = daysAgo(r[0]) <= 120;
+    d.append(el('div', 'd' + (fresh ? ' fresh' : ''), fmt(r[0]) + ' · ' + magTxt(r[1], r[2])));
+    d.append(el('div', 's', [r[6] ? r[6] + ' County' : r[5], r[7] ? '$' + d3.format(',')(r[7]) + ' property damage' : ''].filter(Boolean).join(' · ')));
+    if (r[8]) d.append(el('div', 's', r[8]));
+    d.style.cursor = 'pointer'; d.title = 'Show on the map';
+    d.addEventListener('click', () => { map.setView([r[3], r[4]], Math.max(map.getZoom(), 13)); L.popup().setLatLng([r[3], r[4]]).setContent(popupHTML(r)).openOn(map); });
+    return d;
+  }
+
+  function summary() {
+    const box = $('summary'); box.replaceChildren();
+    const name = st.county ? st.county + ' County' : 'South Carolina';
+    const all = R.filter((r) => r[1] === st.type && (!st.county ? r[5] === 'SC' : r[6] === st.county));
+    const dmg = all.filter((r) => st.type === 'h' ? r[2] >= 1 : st.type === 'w' ? true : true);
+    const label = st.type === 'h' ? 'hail' : st.type === 'w' ? 'damaging wind' : 'tornado';
+    box.append(el('h2', null, name));
+    const lastAny = all[all.length - 1], lastDmg = dmg[dmg.length - 1];
+    const L = el('div', 'last');
+    if (lastDmg) {
+      L.append(el('div', null, 'Last ' + (st.type === 'h' ? 'roof-damaging hail (1"+)' : label)));
+      L.append(el('div', 'when', fmt(lastDmg[0]) + ' · ' + ago(lastDmg[0])));
+      const sameDay = dmg.filter((r) => r[0] === lastDmg[0]);
+      const big = d3.max(sameDay, (r) => r[2]);
+      L.append(el('div', null, sameDay.length + ' report' + (sameDay.length > 1 ? 's' : '') + ' that day, up to ' + magTxt(st.type, big) + '.'));
+      const nar = sameDay.map((r) => r[8]).filter(Boolean)[0]; if (nar) L.append(el('div', 'muted', '“' + nar + '”'));
+    } else L.append(el('div', null, 'No ' + label + ' reports on record.'));
+    box.append(L);
+    if (st.type === 'h' && lastAny && lastAny !== lastDmg && lastAny[0] > (lastDmg || [''])[0]) box.append(el('p', 'muted', 'Smaller hail since then: ' + fmt(lastAny[0]) + ' (' + magTxt('h', lastAny[2]) + ').'));
+    const yr = (n) => dmg.filter((r) => daysAgo(r[0]) <= n * 365.25);
+    const days = (rows) => new Set(rows.map((r) => r[0])).size;
+    const big = el('div', 'big');
+    [[days(yr(1)), 'storm days, last 12 mo'], [days(yr(5)), 'storm days, 5 yrs'], [days(yr(20)), 'storm days, 20 yrs']].forEach(([n, l]) => { const d = el('div'); d.append(el('div', 'n', String(n)), el('div', 'l', l)); big.append(d); });
+    box.append(big);
+    // reports per year, last 20 years
+    const y0 = TODAY.getFullYear() - 19, byY = d3.rollup(dmg.filter((r) => +r[0].slice(0, 4) >= y0), (v) => new Set(v.map((r) => r[0])).size, (r) => +r[0].slice(0, 4));
+    const data = d3.range(y0, TODAY.getFullYear() + 1).map((y) => [y, byY.get(y) || 0]);
+    const bw = 300, bh = 90, x = d3.scaleBand().domain(data.map((d) => d[0])).range([12, bw - 12]).padding(.18), y = d3.scaleLinear().domain([0, d3.max(data, (d) => d[1]) || 1]).range([bh, 0]);
+    const s = d3.create('svg').attr('viewBox', `0 0 ${bw} ${bh + 16}`).attr('width', '100%').attr('class', 'bars').attr('role', 'img').attr('aria-label', 'Storm days per year');
+    s.selectAll('rect').data(data).join('rect').attr('x', (d) => x(d[0])).attr('y', (d) => y(d[1])).attr('width', x.bandwidth()).attr('height', (d) => bh - y(d[1])).attr('rx', 2).attr('fill', (d) => d[0] >= TODAY.getFullYear() - 1 ? '#73213b' : '#c9a3b0').append('title').text((d) => d[0] + ': ' + d[1] + ' storm days');
+    s.selectAll('text').data(data.filter((d, i) => i % 4 === 0 || i === data.length - 1)).join('text').attr('x', (d) => x(d[0]) + x.bandwidth() / 2).attr('y', bh + 13).attr('text-anchor', 'middle').attr('font-size', 9.5).attr('fill', '#6b6f78').text((d) => d[0]);
+    box.append(el('h3', null, 'Days with ' + (st.type === 'h' ? '1"+ hail' : label) + ' per year')); box.lastChild.style.marginTop = '14px'; box.append(s.node());
+    inViewList();
+  }
+  function summaryList() {
+    const label = st.type === 'h' ? 'hail' : st.type === 'w' ? 'damaging wind' : 'tornado';
+    const list = $('recent'); list.replaceChildren();
+    $('recent-h').textContent = 'Most recent ' + label + ' reports' + (st.county ? ' in ' + st.county + ' County' : ' in SC');
+    const rec = filtered(false).filter((r) => st.county || r[5] === 'SC').slice(-40).reverse();
+    if (!rec.length) list.append(el('p', 'muted', 'None in this time range and size.'));
+    rec.forEach((r) => list.append(evRow(r)));
+  }
+
+  let sortK = 'last', sortDir = -1;
+  function table() {
+    const t = $('tbl'); t.replaceChildren();
+    const label = st.type === 'h' ? '1"+ hail' : st.type === 'w' ? 'severe wind' : 'tornado';
+    $('tbl-sub').textContent = 'Based on ' + label + ' reports (filter above). Click a column to sort and a row to see that county.';
+    const counties = shapes.features.filter((f) => f.properties.kind === 'county').map((f) => f.properties.name);
+    const min = st.type === 'h' ? 1 : st.type === 'w' ? 0 : -1;
+    const rows = counties.map((c) => {
+      const a = R.filter((r) => r[1] === st.type && r[6] === c && r[2] >= min);
+      const last = a.length ? a[a.length - 1] : null;
+      const d = (n) => new Set(a.filter((r) => daysAgo(r[0]) <= n * 365.25).map((r) => r[0])).size;
+      return { c, last: last ? last[0] : '', mag: last ? d3.max(a.filter((r) => r[0] === last[0]), (r) => r[2]) : null, y1: d(1), y5: d(5), y20: d(20), biggest: d3.max(a.filter((r) => daysAgo(r[0]) <= 5 * 365.25), (r) => r[2]) };
+    });
+    const cols = [['c', 'County'], ['last', 'Last ' + label], ['mag', 'That day'], ['y1', 'Days, 12 mo'], ['y5', 'Days, 5 yrs'], ['y20', 'Days, 20 yrs'], ['biggest', 'Biggest, 5 yrs']];
+    rows.sort((a, b) => { const x = a[sortK], y = b[sortK]; return (x == null || x === '' ? -1e9 : x) > (y == null || y === '' ? -1e9 : y) ? sortDir : (x === y ? 0 : -sortDir); });
+    const th = el('thead'), tr = el('tr');
+    cols.forEach(([k, l]) => { const h = el('th', null, l); if (k === sortK) h.setAttribute('aria-sort', sortDir > 0 ? 'ascending' : 'descending'); h.addEventListener('click', () => { if (sortK === k) sortDir = -sortDir; else { sortK = k; sortDir = k === 'c' ? 1 : -1; } table(); }); tr.append(h); });
+    th.append(tr); t.append(th);
+    const tb = el('tbody');
+    rows.forEach((r) => {
+      const x = el('tr'); if (r.c === st.county) x.className = 'rowsel';
+      const fresh = r.last && daysAgo(r.last) <= 365;
+      const cells = [r.c, r.last ? fmt(r.last) + ' (' + ago(r.last) + ')' : 'never', r.mag != null ? magTxt(st.type, r.mag) : '', r.y1, r.y5, r.y20, r.biggest != null ? (st.type === 'h' ? r.biggest + '"' : st.type === 'w' ? r.biggest + ' mph' : 'EF' + r.biggest) : ''];
+      cells.forEach((v, i) => { const td = el('td', i === 1 && fresh ? 'fresh' : null, String(v)); x.append(td); });
+      x.addEventListener('click', () => { st.county = r.c; $('county').value = r.c; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      tb.append(x);
+    });
+    t.append(tb);
+  }
+
+  // ---- neighborhoods (Census tracts: median home value + median year built), subdivisions, schools, large buildings ----
+  const tractOK = (g) => { const t = TR && TR[g]; if (!t) return false; return (!st.hv || (t.v || 0) >= st.hv) && (!st.yb || (t.yb && t.yb < st.yb)); };
+  const money = (v) => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : '$' + Math.round(v / 1e3) + 'K';
+  const needTracts = () => st.hv || st.yb || st.shade;
+  function loadLayers() {
+    const jobs = [];
+    if (needTracts() && !TR) jobs.push(fetch('/storms/sc-tracts.json').then((r) => r.json()).then((g) => { TRgeo = g; TR = {}; g.features.forEach((f) => { TR[f.properties.g] = f.properties; }); }));
+    if (st.lsubs && !SUBS) jobs.push(fetch('/storms/sc-subdivisions.json').then((r) => r.ok ? r.json() : []).catch(() => []).then((d) => { SUBS = d; }));
+    if (st.lschools && !SCH) jobs.push(fetch('/storms/sc-schools.json').then((r) => r.json()).then((d) => { SCH = d; }));
+    return jobs.length ? Promise.all(jobs).then(() => true) : null;
+  }
+  const hvColor = d3.scaleThreshold().domain([150e3, 225e3, 300e3, 400e3, 550e3]).range(['#f1eef6', '#d4b9da', '#c994c7', '#df65b0', '#dd1c77', '#980043']);
+  function drawOverlays() {
+    if (trLayer) { map.removeLayer(trLayer); trLayer = null; }
+    if (TRgeo && needTracts()) {
+      const filt = st.hv || st.yb;
+      trLayer = L.geoJSON(TRgeo, { interactive: true, style: (f) => { const p = f.properties, ok = !filt || tractOK(p.g); return { stroke: ok && !!filt, color: '#73213b', weight: .8, opacity: .6, fillColor: st.shade ? (p.v ? hvColor(p.v) : '#cfd3da') : '#73213b', fillOpacity: st.shade ? (!p.v ? .12 : ok ? .45 : .08) : (ok ? .08 : 0) }; },
+        onEachFeature: (f, l) => { const p = f.properties; l.bindTooltip((p.v ? 'Median home ' + money(p.v) : 'No home value') + (p.yb ? ' · built ~' + p.yb : '') + (p.own != null ? ' · ' + p.own + '% owned' : '') + (p.u ? ' · ' + d3.format(',')(p.u) + ' homes' : ''), { sticky: true, opacity: .92 }); } });
+      trLayer.addTo(map); trLayer.bringToBack();
+    }
+    if (subLayer) { map.removeLayer(subLayer); subLayer = null; }
+    if (st.lsubs && SUBS && map.getZoom() >= 10) {
+      const b = map.getBounds().pad(.2);
+      subLayer = L.layerGroup(SUBS.filter((x) => b.contains([x[0], x[1]])).map((x) => L.circleMarker([x[0], x[1]], { radius: 5, color: '#5b2a86', weight: 2, fillColor: '#fff', fillOpacity: .9 }).bindTooltip(x[2], { direction: 'top' }))).addTo(map);
+    }
+    if (schLayer) { map.removeLayer(schLayer); schLayer = null; }
+    if (st.lschools && SCH && map.getZoom() >= 9) {
+      const b = map.getBounds().pad(.2);
+      schLayer = L.layerGroup(SCH.filter((x) => b.contains([x[0], x[1]])).map((x) => L.circleMarker([x[0], x[1]], { radius: x[3] === 'school' ? 5 : 7, color: '#1f4f8f', weight: 2, fillColor: '#9ec3ee', fillOpacity: .95 }).bindTooltip(x[2], { direction: 'top' }))).addTo(map);
+    }
+    loadBig();
+  }
+  // Large buildings (10,000+ sq ft footprint) come live from OpenStreetMap for the area on screen, once zoomed in.
+  let bigTimer = null;
+  function loadBig() {
+    if (bigLayer) { map.removeLayer(bigLayer); bigLayer = null; }
+    if (!st.lbig) { BIG = []; return; }
+    if (map.getZoom() < 12) { BIG = []; hitList(); return; }
+    const b = map.getBounds(), key = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map((v) => v.toFixed(3)).join(',');
+    const show = () => { bigLayer = L.layerGroup(BIG.map((x) => L.polygon(x.pts, { color: '#c75b00', weight: 1.5, fillColor: '#f5a25d', fillOpacity: .45 }).bindTooltip((x.type || 'Building') + ' · ' + d3.format(',')(x.sqft) + ' sq ft' + (x.name ? ' · ' + x.name : ''), { sticky: true }))).addTo(map); hitList(); };
+    if (key === bigKey) { show(); return; }
+    clearTimeout(bigTimer);
+    bigTimer = setTimeout(async () => {
+      const q = '[out:json][timeout:25];way["building"](' + key + ');out tags geom;';
+      $('hit-sub').textContent = 'Loading large buildings on screen…';
+      try {
+        const u = 'https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0/query?' + new URLSearchParams({ where: 'SQFEET >= 10000', geometry: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((v) => v.toFixed(4)).join(','), geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'SQFEET,OCC_CLS,PRIM_OCC,PROP_ADDR,PROP_CITY', outSR: '4326', geometryPrecision: '6', resultRecordCount: '1500', f: 'geojson' });
+        const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
+        const j = await (await fetch(u, { signal: ac.signal })).json(); clearTimeout(tm);
+        BIG = (j.features || []).map((f) => {
+          const g = f.geometry, ring = g.type === 'MultiPolygon' ? g.coordinates[0][0] : g.coordinates[0], p = f.properties;
+          const pts = ring.map((c) => [c[1], c[0]]), c = pts.reduce((s2, q) => [s2[0] + q[0] / pts.length, s2[1] + q[1] / pts.length], [0, 0]);
+          return { pts, lat: c[0], lon: c[1], sqft: Math.round(p.SQFEET), name: p.PROP_ADDR || '', type: [p.OCC_CLS, p.PRIM_OCC].filter((x) => x && x !== 'Unclassified').join(': ') };
+        }).sort((a2, b2) => b2.sqft - a2.sqft);
+        bigKey = key; show(); return;
+      } catch (e) { /* fall through */ }
+      $('hit-sub').textContent = 'Couldn’t load buildings (FEMA USA Structures) right now. Try again in a minute.';
+    }, 500);
+  }
+  const miles = (a, b, c, d) => { const dy = (a - c) * 69.1, dx = (b - d) * 69.1 * Math.cos(a * Math.PI / 180); return Math.sqrt(dx * dx + dy * dy); };
+  // What's near the filtered reports: subdivisions, schools and large buildings, closest + most recent first.
+  function hitList() {
+    const box = $('hits'); if (!box) return; box.replaceChildren();
+    const z = map ? map.getZoom() : 0, b = map ? map.getBounds() : null;
+    const scope = st.county ? (x) => !b || true : () => true;
+    const reps = filtered(true).filter((r) => (st.county ? r[6] === st.county : (z >= 10 && b && b.pad(.3).contains([r[3], r[4]]))));
+    const label = st.type === 'h' ? 'hail' : st.type === 'w' ? 'wind' : 'tornado';
+    $('hit-h').textContent = 'Likely hit' + (st.county ? ' in ' + st.county + ' County' : ' in the map view');
+    if (!st.lsubs && !st.lschools && !st.lbig) { $('hit-sub').textContent = 'Turn on Subdivisions, Schools or Large buildings above to list what sat under these ' + label + ' reports.'; return; }
+    if (!st.county && z < 10) { $('hit-sub').textContent = 'Pick a county or zoom in to list what was hit.'; return; }
+    const inArea = (x) => st.county ? (!countyPoly || pointInCounty(x[0], x[1])) : b.contains([x[0], x[1]]);
+    const near = (lat, lon) => { let best = null; for (const r of reps) { const d = miles(lat, lon, r[3], r[4]); if (d <= st.rad && (!best || r[0] > best.r[0] || (r[0] === best.r[0] && r[2] > best.r[2]))) best = { r, d }; } return best; };
+    const groups = [];
+    if (st.lsubs && SUBS) groups.push(['Subdivisions', 'k-sub', 'Subdivision', SUBS.filter(inArea).map((x) => ({ lat: x[0], lon: x[1], name: x[2], extra: '' }))]);
+    if (st.lschools && SCH) groups.push(['Schools', 'k-sch', x => 'School', SCH.filter(inArea).map((x) => ({ lat: x[0], lon: x[1], name: x[2], extra: x[3] !== 'school' ? x[3] : '' }))]);
+    if (st.lbig) groups.push(['Large buildings (10,000+ sq ft, in view)', 'k-big', 'Building', BIG.map((x) => ({ lat: x.lat, lon: x.lon, name: (x.type || 'Building') + (x.name ? ' · ' + x.name : ''), extra: d3.format(',')(x.sqft) + ' sq ft' }))]);
+    let total = 0;
+    groups.forEach(([title, cls, kind, items]) => {
+      const hits = items.map((x) => Object.assign(x, { hit: near(x.lat, x.lon) })).filter((x) => x.hit).sort((a, b) => b.hit.r[0].localeCompare(a.hit.r[0]) || b.hit.r[2] - a.hit.r[2]);
+      total += hits.length;
+      const h = el('div', 'hitgrp', title + ' · ' + hits.length); box.append(h);
+      if (st.lbig && cls === 'k-big' && z < 12) { box.append(el('p', 'muted', 'Zoom in to town level to load large buildings.')); return; }
+      hits.slice(0, 80).forEach((x) => {
+        const d = el('div', 'hit'); const t = TR && x.tract ? TR[x.tract] : null;
+        const nm = el('div'); nm.append(el('span', 'kind ' + cls, typeof kind === 'function' ? kind(x) : kind), el('span', 'hn', x.name)); d.append(nm);
+        d.append(el('div', 'hs', fmt(x.hit.r[0]) + ' · ' + magTxt(x.hit.r[1], x.hit.r[2]) + ' · ' + (x.hit.d < .1 ? 'right there' : x.hit.d.toFixed(1) + ' mi away') + (x.extra ? ' · ' + x.extra : '')));
+        d.addEventListener('click', () => { map.setView([x.lat, x.lon], Math.max(map.getZoom(), 15)); L.popup().setLatLng([x.lat, x.lon]).setContent('<b>' + x.name.replace(/[<>&]/g, '') + '</b><br>Nearest ' + label + ': ' + fmt(x.hit.r[0]) + ', ' + magTxt(x.hit.r[1], x.hit.r[2]) + ', ' + x.hit.d.toFixed(2) + ' mi away').openOn(map); });
+        box.append(d);
+      });
+      if (hits.length > 80) box.append(el('p', 'muted', '+ ' + (hits.length - 80) + ' more. Narrow the time range or zoom in.'));
+    });
+    $('hit-sub').textContent = total + ' places within ' + (st.rad < 1 ? '½ mile' : st.rad + (st.rad === 1 ? ' mile' : ' miles')) + ' of a ' + label + ' report matching the filters (' + reps.length + ' reports). Most recent first.';
+  }
+  let countyPoly = null;
+  function pointInCounty(lat, lon) { return countyPoly ? countyPoly.some((poly) => { let c = false; const r = poly[0]; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return c; }) : true; }
+  function setCountyPoly() { const f = st.county && shapes.features.find((x) => x.properties.kind === 'county' && x.properties.name === st.county); countyPoly = f ? (f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates]) : null; }
+
+  function render() { const p = loadLayers(); if (p) { p.then(render); } setCountyPoly(); drawMap(); drawOverlays(); summary(); table(); hitList(); }
+  function seg(id, key, conv) {
+    const box = $(id);
+    box.querySelectorAll('button').forEach((b) => { b.setAttribute('aria-pressed', String(String(st[key]) === b.dataset.v)); b.addEventListener('click', () => { st[key] = conv ? conv(b.dataset.v) : b.dataset.v; box.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (key === 'type') sizeOpts(); save(); render(); }); });
+  }
+
+  Promise.all([fetch('/storms/sc-storms.json').then((r) => r.json()), fetch('/storms/sc-shapes.json').then((r) => r.json())]).then(([data, sh]) => {
+    R = data.r; meta = data.meta; shapes = sh;
+    const sc = { type: 'FeatureCollection', features: sh.features.filter((f) => f.properties.kind === 'county') };
+    const cs = $('county'); sc.features.map((f) => f.properties.name).sort().forEach((n) => cs.append(new Option(n + ' County', n)));
+    cs.value = st.county; cs.addEventListener('change', () => { st.county = cs.value; save(); render(); });
+    $('yrs').value = String(st.yrs); $('yrs').addEventListener('change', (e) => { st.yrs = +e.target.value; save(); render(); });
+    sizeOpts(); $('size').addEventListener('change', (e) => { st.size = +e.target.value; save(); render(); });
+    seg('type', 'type'); seg('view', 'view');
+    [['hv', 'hv', (v) => +v], ['yb', 'yb', (v) => +v], ['rad', 'rad', (v) => +v]].forEach(([id, k, f]) => { $(id).value = String(st[k]); $(id).addEventListener('change', (e) => { st[k] = f(e.target.value); save(); render(); }); });
+    ['shade', 'lsubs', 'lschools', 'lbig'].forEach((k) => { $(k).checked = !!st[k]; $(k).addEventListener('change', (e) => { st[k] = e.target.checked; save(); render(); }); });
+    const last = R.filter((r) => r[5] === 'SC').slice(-1)[0];
+    $('sources').replaceChildren('Data: ', ...meta.sources.flatMap((s, i) => { const a = el('a', null, s.name); a.href = s.url; a.target = '_blank'; a.rel = 'noopener'; return i ? ['; ', a] : [a]; }), '. Latest SC report on file: ' + (last ? fmt(last[0]) : '?') + '. Reports from Aug 2026 on are preliminary.');
+    render();
+  }).catch((e) => { $('summary').replaceChildren(el('p', null, 'Couldn’t load the storm data: ' + e.message)); });
+})();
+</script>
+</body>
+</html>

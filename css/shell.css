@@ -1,0 +1,75 @@
+/* Top bar shared by both pages + small pieces the artifact runtime used to provide. */
+html, body { margin: 0; padding: 0; }
+body { background: #f3f4f7; }
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 10px max(16px, 3.5vw); background: #4b1426; color: #fff;
+  font: 600 14px 'MG Manrope', Manrope, 'Helvetica Neue', Arial, sans-serif;
+  box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 4px 14px rgba(43,35,38,.12);
+}
+.topbar .name { color: #fff; text-decoration: none; font-family: 'MG PT Serif', 'PT Serif', Georgia, serif; font-weight: 700; font-size: 17px; letter-spacing: .01em; white-space: nowrap; }
+.topbar nav { display: inline-flex; gap: 4px; background: rgba(255,255,255,.1); border-radius: 10px; padding: 3px; }
+.topbar nav a { color: #f3dfe5; text-decoration: none; padding: 7px 14px; border-radius: 7px; white-space: nowrap; }
+.topbar nav a:hover { background: rgba(255,255,255,.12); color: #fff; }
+.topbar nav a.home { display: inline-flex; align-items: center; align-self: stretch; padding: 0 11px; }
+.topbar nav a.home svg { display: block; }
+.topbar nav a[aria-current="page"] { background: #fff; color: #4b1426; }
+.topbar nav a .n { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 6px; border-radius: 99px; background: rgba(0,0,0,.18); font-size: 12px; text-align: center; }
+.topbar nav a[aria-current="page"] .n { background: #f6ecef; }
+.topbar .spacer { flex: 1; }
+/* removed: .who */ .topbar .who-x { font-weight: 500; font-size: 12.5px; color: #e9cdd6; }
+.topbar .who input { width: 90px; font: inherit; color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 3px 7px; }
+@media print { .topbar { display: none; } }
+
+/* placeholders the artifact runtime used to style */
+.dash-skeleton { opacity: .35; }
+
+/* "Add to pipeline" button on open bid cards */
+.mgp-add {
+  font: 700 12.5px 'MG Manrope', Manrope, 'Helvetica Neue', Arial, sans-serif;
+  color: #fff; background: #73213b; border: 0; border-radius: 8px; padding: 7px 11px; cursor: pointer; white-space: nowrap;
+}
+.mgp-add:hover { background: #4b1426; }
+.mgp-add.in { background: #e6f2ed; color: #006b46; }
+.mgp-add:disabled { opacity: .7; cursor: progress; }
+.mg .bid .act .mgp-wrap { display: inline-flex; gap: 8px; align-items: center; margin-left: auto; }
+
+.topbar nav.right { background: none; padding: 0; }
+.topbar nav.right a { background: rgba(255,255,255,.14); }
+/* "You" moved from the top bar into the pipeline page */
+.who-inline { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--slate, #5b6170); }
+.who-inline input { width: 110px; font: inherit; padding: 4px 8px; border: 1px solid #d8d3d6; border-radius: 6px; }
+
+/* Search everything (top bar, left of Pipeline) */
+.topbar .gsearch { position: relative; flex: 0 1 300px; min-width: 160px; }
+.topbar .gsearch input { width: 100%; box-sizing: border-box; height: 34px; font: 500 14px 'MG Manrope', Manrope, 'Helvetica Neue', Arial, sans-serif; color: #fff; background: rgba(255,255,255,.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f3dfe5' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 10px center; border: 1px solid rgba(255,255,255,.22); border-radius: 9px; padding: 0 10px 0 34px; outline: none; }
+.topbar .gsearch input::placeholder { color: #e3c3cd; }
+.topbar .gsearch input:focus { background-color: #fff; color: #2b2326; border-color: #fff; }
+.topbar .gsearch input:focus::placeholder { color: #8a8f9c; }
+.gsearch-res { position: absolute; right: 0; top: calc(100% + 6px); width: min(580px, calc(100vw - 32px)); max-height: min(70vh, 640px); overflow-y: auto; background: #fff; color: #2b2326; border-radius: 12px; box-shadow: 0 12px 40px rgba(43,35,38,.28); padding: 6px; font-weight: 500; z-index: 60; }
+.gsearch-res h3 { display: flex; justify-content: space-between; margin: 8px 8px 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: #5b6170; }
+.gsearch-res h3 .c { font-weight: 700; }
+.gsearch-res .r { display: flex; align-items: stretch; gap: 2px; }
+.gsearch-res a.go { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 7px 10px; border-radius: 8px; color: inherit; text-decoration: none; }
+.gsearch-res a.go:hover, .gsearch-res a.go.on { background: #f6ecef; }
+.gsearch-res .t { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.gsearch-res .t mark { background: #fde9a8; color: inherit; border-radius: 2px; }
+.gsearch-res .s { font-size: 12.5px; color: #5b6170; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gsearch-res a.ext, .gsearch-res span.ext { flex: 0 0 34px; display: grid; place-items: center; border-radius: 8px; color: #73213b; text-decoration: none; font-weight: 700; }
+.gsearch-res a.ext:hover { background: #f6ecef; }
+.gsearch-res span.ext.ghost { color: #b9a5ac; }
+.gsearch-res .more { display: block; margin: 2px 8px 6px; padding: 4px 0; border: 0; background: none; color: #73213b; font: 700 12.5px 'MG Manrope', Manrope, sans-serif; cursor: pointer; }
+.gsearch-res .none { margin: 12px; color: #5b6170; font-size: 14px; }
+@media (max-width: 700px) { .topbar .gsearch { order: 5; flex: 1 1 100%; } }
+/* Pipeline button when you're on the Pipeline page: white text on a brighter pill (not dark-on-dark) */
+.topbar nav.right a[aria-current="page"] { background: rgba(255,255,255,.26); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); }
+.topbar nav.right a[aria-current="page"] .n { background: #fff; color: #4b1426; }
+
+/* Phones: the section menu scrolls sideways inside the bar instead of widening every page */
+@media (max-width: 700px) {
+  .topbar { gap: 10px; }
+  .topbar nav:not(.right) { max-width: 100%; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; flex: 1 1 100%; }
+  .topbar nav:not(.right)::-webkit-scrollbar { display: none; }
+  .topbar nav a { padding: 7px 11px; }
+}
